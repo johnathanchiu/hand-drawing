@@ -9,7 +9,7 @@ import WebcamComponent, {
   setupCanvas,
   teardownWebcam,
 } from "./detector/video";
-import { createKeyMap, drawHands } from "./lib/utils";
+import { createKeyMap, drawHands, draw } from "./lib/utils";
 
 let detector;
 
@@ -20,7 +20,8 @@ function App() {
   const [isStreaming, setStreaming] = useState(false);
 
   const videoRef = useRef(null);
-  const [ctx, setCtx] = useState(null);
+  const [drawCtx, setDrawCtx] = useState(null);
+  const [floatCtx, setFloatCtx] = useState(null);
 
   useEffect(() => {
     async function initialize() {
@@ -28,9 +29,17 @@ function App() {
         videoRef.current = await setupWebcam();
         console.log("webcam setup!");
       }
-      if (!ctx) {
-        const canvas = await setupCanvas(videoRef.current);
-        setCtx(canvas);
+      if (!drawCtx || !floatCtx) {
+        const drawingCanvas = await setupCanvas(
+          videoRef.current,
+          "draw-canvas"
+        );
+        const floatingCanvas = await setupCanvas(
+          videoRef.current,
+          "float-canvas"
+        );
+        setDrawCtx(drawingCanvas);
+        setFloatCtx(floatingCanvas);
         console.log("canvas setup!");
       }
     }
@@ -41,8 +50,9 @@ function App() {
         videoRef.current = null;
         console.log("webcam teardown!");
       }
-      if (ctx) {
-        setCtx(null);
+      if (drawCtx || floatCtx) {
+        setDrawCtx(null);
+        setFloatCtx(null);
         console.log("canvas teardown!");
       }
     }
@@ -78,21 +88,22 @@ function App() {
       flipHorizontal: false,
     });
 
-    ctx.clearRect(
+    floatCtx.clearRect(
       0,
       0,
       videoRef.current.videoWidth,
       videoRef.current.videoHeight
     );
-    ctx.drawImage(
-      videoRef.current,
-      0,
-      0,
-      videoRef.current.videoWidth,
-      videoRef.current.videoHeight
-    );
-    drawHands(hands, ctx);
-  }, !!(isStreaming && isModelLoaded && videoRef.current && ctx));
+    // ctx.drawImage(
+    //   videoRef.current,
+    //   0,
+    //   0,
+    //   videoRef.current.videoWidth,
+    //   videoRef.current.videoHeight
+    // );
+    drawHands(hands, floatCtx);
+    draw(hands, drawCtx);
+  }, !!(isStreaming && isModelLoaded && videoRef.current && floatCtx && drawCtx));
 
   return (
     <div>
@@ -105,9 +116,24 @@ function App() {
           {isStreaming ? "Stop tracking" : "Start tracking"}
         </button>
       )}
+      {isStreaming && (
+        <button
+          onClick={() => {
+            drawCtx.clearRect(
+              0,
+              0,
+              videoRef.current.videoWidth,
+              videoRef.current.videoHeight
+            );
+          }}
+        >
+          Clear Canvas!
+        </button>
+      )}
       <canvas
         style={{
           // visibility: "hidden",
+          position: "absolute",
           display: isStreaming ? "block" : "none", // Hide canvas by default
           transform: "scaleX(-1)",
           zIndex: 1,
@@ -115,7 +141,21 @@ function App() {
           boxShadow: "0 3px 10px rgb(0 0 0)",
           maxWidth: "85vw",
         }}
-        id="canvas"
+        id="draw-canvas"
+      />
+      <canvas
+        style={{
+          // visibility: "hidden",
+          position: "absolute",
+          backgroundColor: "transparent",
+          display: isStreaming ? "block" : "none", // Hide canvas by default
+          transform: "scaleX(-1)",
+          zIndex: 0,
+          borderRadius: "1rem",
+          boxShadow: "0 3px 10px rgb(0 0 0)",
+          maxWidth: "85vw",
+        }}
+        id="float-canvas"
       />
       <video
         style={{

@@ -28,8 +28,8 @@ export async function teardownWebcam(video) {
   video.srcObject = null;
 }
 
-export async function setupCanvas(video) {
-  const canvas = document.getElementById("canvas");
+export async function setupCanvas(video, canvasID) {
+  const canvas = document.getElementById(canvasID);
   const ctx = canvas.getContext("2d");
 
   canvas.width = video.width;
