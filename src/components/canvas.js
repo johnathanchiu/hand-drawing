@@ -131,6 +131,48 @@ export default function CanvasComponent({
 
   return (
     <div>
+      <canvas
+        style={{
+          position: "absolute",
+          display: isStreaming ? "block" : "none",
+          backgroundColor: "transparent",
+          transform: "scaleX(-1)",
+          zIndex: 1,
+          borderRadius: "1rem",
+          boxShadow: "0 3px 10px rgb(0 0 0)",
+          width: "80%", // Set the width to 80% of the container width
+          height: "80%", // Set the height to 60% of the container height
+        }}
+        id="draw-canvas"
+      />
+      <canvas
+        style={{
+          position: "absolute",
+          backgroundColor: "white",
+          display: isStreaming ? "block" : "none",
+          transform: "scaleX(-1)",
+          zIndex: 0,
+          borderRadius: "1rem",
+          boxShadow: "0 3px 10px rgb(0 0 0)",
+          width: "80%", // Set the width to 80% of the container width
+          height: "80%", // Set the height to 60% of the container height
+        }}
+        id="float-canvas"
+      />
+      <video
+        style={{
+          // visibility: "hidden",
+          display: isStreaming ? "block" : "none", // Hide canvas by default
+          transform: "scaleX(-1)",
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: 0,
+          height: 0,
+        }}
+        id="video"
+        playsInline
+      />
       {isStreaming && (
         <button
           onClick={() => {
@@ -145,57 +187,6 @@ export default function CanvasComponent({
           Clear Canvas!
         </button>
       )}
-      <div
-        style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          maxWidth: "85vw",
-        }}
-      >
-        <canvas
-          style={{
-            // visibility: "hidden",
-            position: "absolute",
-            display: "block",
-            transform: "scaleX(-1)",
-            zIndex: 1,
-            borderRadius: "1rem",
-            width: "100%",
-            height: "100%",
-          }}
-          id="draw-canvas"
-        />
-        <canvas
-          style={{
-            // visibility: "hidden",
-            position: "absolute",
-            backgroundColor: "transparent",
-            display: "block",
-            transform: "scaleX(-1)",
-            zIndex: 0,
-            borderRadius: "1rem",
-            width: "100%",
-            height: "100%",
-          }}
-          id="float-canvas"
-        />
-        <video
-          style={{
-            // visibility: "hidden",
-            display: isStreaming ? "block" : "none", // Hide canvas by default
-            transform: "scaleX(-1)",
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-          }}
-          id="video"
-          playsInline
-        />
-      </div>
     </div>
   );
 }

@@ -19,6 +19,18 @@ const FIST_PALM_CENTROIDS = [
   ],
 ];
 
+export function getUserHandGesture(handPoseEstimations) {
+  let fingerWristDistances =
+    calculateFingerToWristDistances(handPoseEstimations);
+  const category = kMeansCentroidsSearch(fingerWristDistances);
+  if (category === 0) {
+    // Hand gesture is a fist
+    return "Fist";
+  } else {
+  }
+  return "None";
+}
+
 export function createKeyMap(handPoseEstimations) {
   const handPoseKeyMap = [];
   for (let i = 0; i < handPoseEstimations.length; i++) {
@@ -61,26 +73,26 @@ export const kMeansCentroidsSearch = (fingerWristDistances) => {
   return nearestCentroidIndex;
 };
 
-export const calculateFingerToWristDistances = (data) => {
+export const calculateFingerToWristDistances = (handPoseEstimations) => {
   const wristThumbDistance = euclideanDistance([
-    [data.wrist.x, data.thumb_tip.x],
-    [data.wrist.y, data.thumb_tip.y],
+    [handPoseEstimations.wrist.x, handPoseEstimations.thumb_tip.x],
+    [handPoseEstimations.wrist.y, handPoseEstimations.thumb_tip.y],
   ]);
   const wristIndexDistance = euclideanDistance([
-    [data.wrist.x, data.index_finger_tip.x],
-    [data.wrist.y, data.index_finger_tip.y],
+    [handPoseEstimations.wrist.x, handPoseEstimations.index_finger_tip.x],
+    [handPoseEstimations.wrist.y, handPoseEstimations.index_finger_tip.y],
   ]);
   const wristMiddleDistance = euclideanDistance([
-    [data.wrist.x, data.middle_finger_tip.x],
-    [data.wrist.y, data.middle_finger_tip.y],
+    [handPoseEstimations.wrist.x, handPoseEstimations.middle_finger_tip.x],
+    [handPoseEstimations.wrist.y, handPoseEstimations.middle_finger_tip.y],
   ]);
   const wristRingDistance = euclideanDistance([
-    [data.wrist.x, data.ring_finger_tip.x],
-    [data.wrist.y, data.ring_finger_tip.y],
+    [handPoseEstimations.wrist.x, handPoseEstimations.ring_finger_tip.x],
+    [handPoseEstimations.wrist.y, handPoseEstimations.ring_finger_tip.y],
   ]);
   const wristPinkyDistance = euclideanDistance([
-    [data.wrist.x, data.pinky_finger_tip.x],
-    [data.wrist.y, data.pinky_finger_tip.y],
+    [handPoseEstimations.wrist.x, handPoseEstimations.pinky_finger_tip.x],
+    [handPoseEstimations.wrist.y, handPoseEstimations.pinky_finger_tip.y],
   ]);
 
   return [
