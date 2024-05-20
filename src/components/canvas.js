@@ -14,14 +14,10 @@ export async function setupCanvas(video, canvasID) {
   return ctx;
 }
 
-export default function CanvasComponent({
-  videoRef,
-  detector,
-  isStreaming,
-  isModelLoaded,
-}) {
+export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
   const [drawCtx, setDrawCtx] = useState(null);
   const [floatCtx, setFloatCtx] = useState(null);
+  const [isStreaming, setStreaming] = useState(false);
   const [brushSize, setBrushSize] = useState(2);
   const [drawingPoints, setDrawingPoints] = useState([]);
 
@@ -34,7 +30,7 @@ export default function CanvasComponent({
         euclideanDistance([
           [indexKeypoint.x, thumbKeypoint.x],
           [indexKeypoint.y, thumbKeypoint.y],
-        ]) < 22.0
+        ]) < 20.0
       ) {
         // setDrawingPoints((previousState) => [
         //   ...previousState,
@@ -130,63 +126,80 @@ export default function CanvasComponent({
   }, !!(isStreaming && isModelLoaded && videoRef.current && floatCtx && drawCtx));
 
   return (
-    <div>
-      <canvas
-        style={{
-          position: "absolute",
-          display: isStreaming ? "block" : "none",
-          backgroundColor: "transparent",
-          transform: "scaleX(-1)",
-          zIndex: 1,
-          borderRadius: "1rem",
-          boxShadow: "0 3px 10px rgb(0 0 0)",
-          width: "80%", // Set the width to 80% of the container width
-          height: "80%", // Set the height to 60% of the container height
-        }}
-        id="draw-canvas"
-      />
-      <canvas
-        style={{
-          position: "absolute",
-          backgroundColor: "white",
-          display: isStreaming ? "block" : "none",
-          transform: "scaleX(-1)",
-          zIndex: 0,
-          borderRadius: "1rem",
-          boxShadow: "0 3px 10px rgb(0 0 0)",
-          width: "80%", // Set the width to 80% of the container width
-          height: "80%", // Set the height to 60% of the container height
-        }}
-        id="float-canvas"
-      />
-      <video
-        style={{
-          // visibility: "hidden",
-          display: isStreaming ? "block" : "none", // Hide canvas by default
-          transform: "scaleX(-1)",
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: 0,
-          height: 0,
-        }}
-        id="video"
-        playsInline
-      />
-      {isStreaming && (
-        <button
-          onClick={() => {
-            drawCtx.clearRect(
-              0,
-              0,
-              videoRef.current.width,
-              videoRef.current.height
-            );
+    <div className="flex h-screen">
+      {/* Left Menu Bar */}
+      <div className="bg-gray-200 w-1/12 p-4">
+        {isModelLoaded && videoRef && (
+          <button
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4"
+            onClick={() => {
+              setStreaming((prevState) => !prevState);
+            }}
+          >
+            {isStreaming ? "Stop Drawing" : "Start Drawing"}
+          </button>
+        )}
+        {isStreaming && (
+          <button
+            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mt-4"
+            onClick={() => {
+              drawCtx.clearRect(
+                0,
+                0,
+                videoRef.current.width,
+                videoRef.current.height
+              );
+            }}
+          >
+            Clear Canvas!
+          </button>
+        )}
+      </div>
+
+      {/* Right Content Area */}
+      <div className="flex-1 flex justify-center items-center p-4 relative">
+        <canvas
+          style={{
+            position: "absolute",
+            display: isStreaming ? "block" : "none",
+            backgroundColor: "transparent",
+            transform: "scaleX(-1)",
+            zIndex: 1,
+            borderRadius: "1rem",
+            boxShadow: "0 3px 10px rgb(0 0 0 / 0.2)",
+            width: "100%",
+            height: "100%",
           }}
-        >
-          Clear Canvas!
-        </button>
-      )}
+          id="draw-canvas"
+        />
+        <canvas
+          style={{
+            position: "absolute",
+            backgroundColor: "white",
+            display: isStreaming ? "block" : "none",
+            transform: "scaleX(-1)",
+            zIndex: 0,
+            borderRadius: "1rem",
+            boxShadow: "0 3px 10px rgb(0 0 0 / 0.2)",
+            width: "100%",
+            height: "100%",
+          }}
+          id="float-canvas"
+        />
+        <video
+          style={{
+            display: isStreaming ? "block" : "none",
+            transform: "scaleX(-1)",
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: 0,
+            height: 0,
+          }}
+          id="video"
+          playsInline
+        />
+      </div>
     </div>
   );
 }
