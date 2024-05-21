@@ -4,6 +4,7 @@ import "@tensorflow/tfjs-backend-webgl";
 import * as handPoseDetection from "@tensorflow-models/hand-pose-detection";
 import React, { useState, useRef, useEffect } from "react";
 import CanvasComponent from "./components/canvas";
+import { Analytics } from "@vercel/analytics/react";
 
 let detector;
 
@@ -33,6 +34,7 @@ function App() {
 
   return (
     <div className="flex flex-col h-screen">
+      <Analytics />
       {/* Top Header Bar */}
       <div className="bg-gray-800 text-white p-4 flex items-center">
         {/* App name on the left */}
