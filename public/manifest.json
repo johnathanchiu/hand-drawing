@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Floating Whiteboard",
+  "name": "Pinch to draw on a floating whiteboard",
   "icons": [
     {
       "src": "favicon.ico",
