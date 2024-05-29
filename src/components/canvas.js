@@ -22,8 +22,12 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
   const [brushSize, setBrushSize] = useState(2);
   const [drawingPoints, setDrawingPoints] = useState([]);
   const [isDrawing, setDrawing] = useState(false);
+  const [doDrawCurve, setDrawCurve] = useState(false);
 
   const drawIndicators = (hands) => {
+    // TODO: Figure out what the issue is here, it's reversed?
+    const canvas = doDrawCurve ? indicatorCtx : drawCtx;
+
     for (let i = 0; i < hands.length; i++) {
       const hand = hands[i];
       let indexKeypoint = hand.keypoints.index_finger_tip;
@@ -40,15 +44,9 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
         ]);
         setDrawing(true);
 
-        indicatorCtx.beginPath();
-        indicatorCtx.arc(
-          indexKeypoint.x,
-          indexKeypoint.y,
-          brushSize,
-          0,
-          2 * Math.PI
-        );
-        indicatorCtx.fill();
+        canvas.beginPath();
+        canvas.arc(indexKeypoint.x, indexKeypoint.y, brushSize, 0, 2 * Math.PI);
+        canvas.fill();
       } else {
         setDrawing(false);
       }
@@ -154,17 +152,19 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
   }, !!(isStreaming && isModelLoaded && videoRef.current));
 
   useEffect(() => {
-    if (!isDrawing && drawingPoints.length > 0) {
-      if (drawingPoints.length >= 2) {
-        draw(drawingPoints);
+    if (!isDrawing) {
+      if (doDrawCurve) {
+        if (drawingPoints.length >= 2) {
+          indicatorCtx.clearRect(
+            0,
+            0,
+            videoRef.current.width,
+            videoRef.current.height
+          );
+          draw(drawingPoints);
+        }
       }
       setDrawingPoints([]);
-      indicatorCtx.clearRect(
-        0,
-        0,
-        videoRef.current.videoWidth,
-        videoRef.current.videoHeight
-      );
     }
   }, [isDrawing]);
 
@@ -174,7 +174,7 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
       <div className="bg-gray-200 w-1/12 p-4">
         {isModelLoaded && videoRef && (
           <button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4"
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4 w-full"
             onClick={() => {
               setStreaming((prevState) => !prevState);
             }}
@@ -183,19 +183,37 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
           </button>
         )}
         {isStreaming && (
-          <button
-            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mt-4"
-            onClick={() => {
-              drawCtx.clearRect(
-                0,
-                0,
-                videoRef.current.width,
-                videoRef.current.height
-              );
-            }}
-          >
-            Clear Canvas!
-          </button>
+          <div>
+            <button
+              className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mt-4 w-full"
+              onClick={() => {
+                drawCtx.clearRect(
+                  0,
+                  0,
+                  videoRef.current.width,
+                  videoRef.current.height
+                );
+                indicatorCtx.clearRect(
+                  0,
+                  0,
+                  videoRef.current.width,
+                  videoRef.current.height
+                );
+              }}
+            >
+              Clear Canvas!
+            </button>
+            <button
+              className={`text-white font-bold py-2 px-4 rounded mt-4 w-full ${
+                doDrawCurve
+                  ? "bg-green-500 hover:bg-green-700"
+                  : "bg-gray-500 hover:bg-gray-700"
+              }`}
+              onClick={() => setDrawCurve((prevState) => !prevState)}
+            >
+              {doDrawCurve ? "Dashed" : "Solid"}
+            </button>
+          </div>
         )}
       </div>
 
