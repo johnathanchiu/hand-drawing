@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { setupWebcam, teardownWebcam } from "../lib/video";
 import { useAnimationFrame } from "../lib/hooks/animation";
 import { createKeyMap, drawHands } from "../lib/pose";
@@ -15,19 +15,18 @@ export async function setupCanvas(video, canvasID) {
 }
 
 export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
-  const [indicatorCtx, setIndicatorCtx] = useState(null);
-  const [drawCtx, setDrawCtx] = useState(null);
-  const [floatCtx, setFloatCtx] = useState(null);
   const [isStreaming, setStreaming] = useState(false);
   const [brushSize, setBrushSize] = useState(2);
   const [drawingPoints, setDrawingPoints] = useState([]);
   const [isDrawing, setDrawing] = useState(false);
-  const [doDrawCurve, setDrawCurve] = useState(false);
+  const [isDashed, setDashed] = useState(true);
+
+  const [indicatorCtx, setIndicatorCtx] = useState(null);
+  const [drawCtx, setDrawCtx] = useState(null);
+  const [floatCtx, setFloatCtx] = useState(null);
+  const currentCanvasRef = useRef(null);
 
   const drawIndicators = (hands) => {
-    // TODO: Figure out what the issue is here, it's reversed?
-    const canvas = doDrawCurve ? indicatorCtx : drawCtx;
-
     for (let i = 0; i < hands.length; i++) {
       const hand = hands[i];
       let indexKeypoint = hand.keypoints.index_finger_tip;
@@ -44,9 +43,15 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
         ]);
         setDrawing(true);
 
-        canvas.beginPath();
-        canvas.arc(indexKeypoint.x, indexKeypoint.y, brushSize, 0, 2 * Math.PI);
-        canvas.fill();
+        currentCanvasRef.current.beginPath();
+        currentCanvasRef.current.arc(
+          indexKeypoint.x,
+          indexKeypoint.y,
+          brushSize,
+          0,
+          2 * Math.PI
+        );
+        currentCanvasRef.current.fill();
       } else {
         setDrawing(false);
       }
@@ -54,14 +59,15 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
   };
 
   const draw = (points) => {
+    drawCtx.beginPath();
+    drawCtx.moveTo(points[0].x, points[0].y);
+
     if (points.length === 2) {
       // For two points, just draw a straight line
       drawCtx.lineTo(points[1].x, points[1].y);
       return;
     }
 
-    drawCtx.beginPath();
-    drawCtx.moveTo(points[0].x, points[0].y);
     for (let i = 1; i < points.length - 2; i += 2) {
       if (i + 2 < points.length) {
         drawCtx.bezierCurveTo(
@@ -110,6 +116,12 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
         setDrawCtx(drawingCanvas);
         setFloatCtx(floatingCanvas);
         setIndicatorCtx(indicatorCanvas);
+
+        if (isDashed) {
+          currentCanvasRef.current = drawingCanvas;
+        } else {
+          currentCanvasRef.current = indicatorCanvas;
+        }
         console.log("canvas setup!");
       }
     }
@@ -135,6 +147,14 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
     }
   }, [isStreaming]);
 
+  useEffect(() => {
+    if (isDashed) {
+      currentCanvasRef.current = drawCtx;
+    } else {
+      currentCanvasRef.current = indicatorCtx;
+    }
+  }, [isDashed]);
+
   useAnimationFrame(async (delta) => {
     let hands = await detector.estimateHands(videoRef.current, {
       flipHorizontal: false,
@@ -153,14 +173,17 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
 
   useEffect(() => {
     if (!isDrawing) {
-      if (doDrawCurve) {
+      if (indicatorCtx) {
+        indicatorCtx.clearRect(
+          0,
+          0,
+          videoRef.current.width,
+          videoRef.current.height
+        );
+      }
+
+      if (!isDashed) {
         if (drawingPoints.length >= 2) {
-          indicatorCtx.clearRect(
-            0,
-            0,
-            videoRef.current.width,
-            videoRef.current.height
-          );
           draw(drawingPoints);
         }
       }
@@ -205,13 +228,15 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
             </button>
             <button
               className={`text-white font-bold py-2 px-4 rounded mt-4 w-full ${
-                doDrawCurve
+                isDashed
                   ? "bg-green-500 hover:bg-green-700"
                   : "bg-gray-500 hover:bg-gray-700"
               }`}
-              onClick={() => setDrawCurve((prevState) => !prevState)}
+              onClick={() => {
+                setDashed((prevState) => !prevState);
+              }}
             >
-              {doDrawCurve ? "Dashed" : "Solid"}
+              {isDashed ? "Solid" : "Dashed"}
             </button>
           </div>
         )}
