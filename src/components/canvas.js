@@ -15,13 +15,15 @@ export async function setupCanvas(video, canvasID) {
 }
 
 export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
+  const [indicatorCtx, setIndicatorCtx] = useState(null);
   const [drawCtx, setDrawCtx] = useState(null);
   const [floatCtx, setFloatCtx] = useState(null);
   const [isStreaming, setStreaming] = useState(false);
   const [brushSize, setBrushSize] = useState(2);
   const [drawingPoints, setDrawingPoints] = useState([]);
+  const [isDrawing, setDrawing] = useState(false);
 
-  const draw = (hands) => {
+  const drawIndicators = (hands) => {
     for (let i = 0; i < hands.length; i++) {
       const hand = hands[i];
       let indexKeypoint = hand.keypoints.index_finger_tip;
@@ -32,41 +34,61 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
           [indexKeypoint.y, thumbKeypoint.y],
         ]) < 20.0
       ) {
-        // setDrawingPoints((previousState) => [
-        //   ...previousState,
-        //   { x: indexKeypoint.x, y: indexKeypoint.y },
-        // ]);
+        setDrawingPoints((previousState) => [
+          ...previousState,
+          { x: indexKeypoint.x, y: indexKeypoint.y },
+        ]);
+        setDrawing(true);
 
-        drawCtx.beginPath();
-        drawCtx.arc(
+        indicatorCtx.beginPath();
+        indicatorCtx.arc(
           indexKeypoint.x,
           indexKeypoint.y,
           brushSize,
           0,
           2 * Math.PI
         );
-        drawCtx.fill();
+        indicatorCtx.fill();
+      } else {
+        setDrawing(false);
       }
-      // else {
-      //   setDrawingPoints([]);
-      // }
     }
   };
 
-  // useEffect(() => {
-  //   if (drawingPoints.length > 1) {
-  //     drawCtx.beginPath();
-  //     drawCtx.moveTo(
-  //       drawingPoints[drawingPoints.length - 2].x,
-  //       drawingPoints[drawingPoints.length - 2].y
-  //     );
-  //     drawCtx.lineTo(
-  //       drawingPoints[drawingPoints.length - 1].x,
-  //       drawingPoints[drawingPoints.length - 1].y
-  //     );
-  //     drawCtx.stroke();
-  //   }
-  // }, [drawingPoints]);
+  const draw = (points) => {
+    if (points.length === 2) {
+      // For two points, just draw a straight line
+      drawCtx.lineTo(points[1].x, points[1].y);
+      return;
+    }
+
+    drawCtx.beginPath();
+    drawCtx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length - 2; i += 2) {
+      if (i + 2 < points.length) {
+        drawCtx.bezierCurveTo(
+          points[i].x,
+          points[i].y,
+          points[i + 1].x,
+          points[i + 1].y,
+          points[i + 2].x,
+          points[i + 2].y
+        );
+      }
+    }
+
+    // If there are an odd number of points, handle the last segment
+    if (points.length % 2 === 0) {
+      let lastPoint = points[points.length - 1];
+      drawCtx.lineTo(lastPoint.x, lastPoint.y);
+    } else {
+      let cp = points[points.length - 2];
+      let endPoint = points[points.length - 1];
+      drawCtx.quadraticCurveTo(cp.x, cp.y, endPoint.x, endPoint.y);
+    }
+
+    drawCtx.stroke();
+  };
 
   useEffect(() => {
     async function initialize() {
@@ -74,7 +96,7 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
         videoRef.current = await setupWebcam();
         console.log("webcam setup!");
       }
-      if (!drawCtx || !floatCtx) {
+      if (!drawCtx || !floatCtx || !indicatorCtx) {
         const drawingCanvas = await setupCanvas(
           videoRef.current,
           "draw-canvas"
@@ -83,8 +105,13 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
           videoRef.current,
           "float-canvas"
         );
+        const indicatorCanvas = await setupCanvas(
+          videoRef.current,
+          "indicator-canvas"
+        );
         setDrawCtx(drawingCanvas);
         setFloatCtx(floatingCanvas);
+        setIndicatorCtx(indicatorCanvas);
         console.log("canvas setup!");
       }
     }
@@ -95,9 +122,10 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
         videoRef.current = null;
         console.log("webcam teardown!");
       }
-      if (drawCtx || floatCtx) {
+      if (drawCtx || floatCtx || indicatorCtx) {
         setDrawCtx(null);
         setFloatCtx(null);
+        setIndicatorCtx(null);
         console.log("canvas teardown!");
       }
     }
@@ -122,8 +150,23 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
       videoRef.current.videoHeight
     );
     drawHands(hands, floatCtx);
-    draw(hands);
-  }, !!(isStreaming && isModelLoaded && videoRef.current && floatCtx && drawCtx));
+    drawIndicators(hands);
+  }, !!(isStreaming && isModelLoaded && videoRef.current));
+
+  useEffect(() => {
+    if (!isDrawing && drawingPoints.length > 0) {
+      if (drawingPoints.length >= 2) {
+        draw(drawingPoints);
+      }
+      setDrawingPoints([]);
+      indicatorCtx.clearRect(
+        0,
+        0,
+        videoRef.current.videoWidth,
+        videoRef.current.videoHeight
+      );
+    }
+  }, [isDrawing]);
 
   return (
     <div className="flex h-screen">
@@ -161,8 +204,22 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
         <canvas
           style={{
             position: "absolute",
-            display: isStreaming ? "block" : "none",
             backgroundColor: "transparent",
+            display: isStreaming ? "block" : "none",
+            transform: "scaleX(-1)",
+            zIndex: 2,
+            borderRadius: "1rem",
+            boxShadow: "0 3px 10px rgb(0 0 0 / 0.2)",
+            width: "100%",
+            height: "100%",
+          }}
+          id="draw-canvas"
+        />
+        <canvas
+          style={{
+            position: "absolute",
+            backgroundColor: "transparent",
+            display: isStreaming ? "block" : "none",
             transform: "scaleX(-1)",
             zIndex: 1,
             borderRadius: "1rem",
@@ -170,7 +227,7 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
             width: "100%",
             height: "100%",
           }}
-          id="draw-canvas"
+          id="indicator-canvas"
         />
         <canvas
           style={{
