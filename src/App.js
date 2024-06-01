@@ -10,7 +10,6 @@ let detector;
 
 function App() {
   // const [fingerTracker, setFingerTracker] = useState(null);
-  const videoRef = useRef(null);
   const [isModelLoaded, setModelLoaded] = useState(false);
 
   useEffect(() => {
@@ -50,11 +49,7 @@ function App() {
         </div>
       </div>
       {/* Canvas & Menu */}
-      <CanvasComponent
-        detector={detector}
-        videoRef={videoRef}
-        isModelLoaded={isModelLoaded}
-      />
+      <CanvasComponent detector={detector} isModelLoaded={isModelLoaded} />
     </div>
   );
 }
