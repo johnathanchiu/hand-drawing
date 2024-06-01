@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+
 import { setupWebcam, teardownWebcam } from "../lib/video";
 import { useAnimationFrame } from "../lib/hooks/animation";
 import { createKeyMap, drawHands } from "../lib/pose";
@@ -11,15 +12,17 @@ export async function setupCanvas(video, canvasID) {
   canvas.width = video.width;
   canvas.height = video.height;
 
-  return ctx;
+  return [canvas, ctx];
 }
 
-export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
-  const [drawCtx, setDrawCtx] = useState(null);
-  const [floatCtx, setFloatCtx] = useState(null);
-  const [isStreaming, setStreaming] = useState(false);
+export default function CanvasComponent({ detector, isModelLoaded }) {
+  const videoRef = useRef(null);
+  const [drawingCanvasCtx, setDrawingCanvasCtx] = useState(null);
+  const [floatingCanvasCtx, setFloatingCanvasCtx] = useState(null);
+
+  const drawingPointsRef = useRef([]);
   const [brushSize, setBrushSize] = useState(2);
-  const [drawingPoints, setDrawingPoints] = useState([]);
+  const [isStreaming, setStreaming] = useState(false);
 
   const draw = (hands) => {
     for (let i = 0; i < hands.length; i++) {
@@ -30,63 +33,54 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
         euclideanDistance([
           [indexKeypoint.x, thumbKeypoint.x],
           [indexKeypoint.y, thumbKeypoint.y],
-        ]) < 20.0
+        ]) < 25.0
       ) {
-        // setDrawingPoints((previousState) => [
-        //   ...previousState,
-        //   { x: indexKeypoint.x, y: indexKeypoint.y },
-        // ]);
+        if (drawingPointsRef.current.length > 0) {
+          let previousPoint =
+            drawingPointsRef.current[drawingPointsRef.current.length - 1];
+          if (
+            euclideanDistance([
+              [indexKeypoint.x, previousPoint.x],
+              [indexKeypoint.y, previousPoint.y],
+            ]) < 10.0
+          ) {
+            return;
+          }
+        }
 
-        drawCtx.beginPath();
-        drawCtx.arc(
+        drawingPointsRef.current = [
+          ...drawingPointsRef.current,
+          { x: indexKeypoint.x, y: indexKeypoint.y },
+        ];
+
+        drawingCanvasCtx.beginPath();
+        drawingCanvasCtx.arc(
           indexKeypoint.x,
           indexKeypoint.y,
           brushSize,
           0,
           2 * Math.PI
         );
-        drawCtx.fill();
+        drawingCanvasCtx.fill();
       }
-      // else {
-      //   setDrawingPoints([]);
-      // }
     }
   };
-
-  // useEffect(() => {
-  //   if (drawingPoints.length > 1) {
-  //     drawCtx.beginPath();
-  //     drawCtx.moveTo(
-  //       drawingPoints[drawingPoints.length - 2].x,
-  //       drawingPoints[drawingPoints.length - 2].y
-  //     );
-  //     drawCtx.lineTo(
-  //       drawingPoints[drawingPoints.length - 1].x,
-  //       drawingPoints[drawingPoints.length - 1].y
-  //     );
-  //     drawCtx.stroke();
-  //   }
-  // }, [drawingPoints]);
 
   useEffect(() => {
     async function initialize() {
       if (!videoRef.current) {
         videoRef.current = await setupWebcam();
-        console.log("webcam setup!");
       }
-      if (!drawCtx || !floatCtx) {
-        const drawingCanvas = await setupCanvas(
-          videoRef.current,
-          "draw-canvas"
-        );
-        const floatingCanvas = await setupCanvas(
-          videoRef.current,
-          "float-canvas"
-        );
-        setDrawCtx(drawingCanvas);
-        setFloatCtx(floatingCanvas);
-        console.log("canvas setup!");
+      console.log("webcam setup!");
+      if (!drawingCanvasCtx) {
+        const [, ctx] = await setupCanvas(videoRef.current, "draw-canvas");
+        setDrawingCanvasCtx(ctx);
       }
+      if (!floatingCanvasCtx) {
+        const [, ctx] = await setupCanvas(videoRef.current, "float-canvas");
+        setFloatingCanvasCtx(ctx);
+      }
+      console.log("canvas setup!");
     }
 
     async function destroy() {
@@ -95,11 +89,13 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
         videoRef.current = null;
         console.log("webcam teardown!");
       }
-      if (drawCtx || floatCtx) {
-        setDrawCtx(null);
-        setFloatCtx(null);
-        console.log("canvas teardown!");
+      if (drawingCanvasCtx) {
+        setDrawingCanvasCtx(null);
       }
+      if (floatingCanvasCtx) {
+        setFloatingCanvasCtx(null);
+      }
+      console.log("canvas teardown!");
     }
 
     if (isStreaming) {
@@ -115,15 +111,15 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
     });
     hands = createKeyMap(hands);
 
-    floatCtx.clearRect(
+    floatingCanvasCtx.clearRect(
       0,
       0,
       videoRef.current.videoWidth,
       videoRef.current.videoHeight
     );
-    drawHands(hands, floatCtx);
+    drawHands(hands, floatingCanvasCtx);
     draw(hands);
-  }, !!(isStreaming && isModelLoaded && videoRef.current && floatCtx && drawCtx));
+  }, isStreaming && isModelLoaded && !!videoRef.current);
 
   return (
     <div className="flex h-screen">
@@ -143,7 +139,7 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
           <button
             className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mt-4"
             onClick={() => {
-              drawCtx.clearRect(
+              drawingCanvasCtx.clearRect(
                 0,
                 0,
                 videoRef.current.width,
