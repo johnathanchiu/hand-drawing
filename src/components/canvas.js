@@ -1,8 +1,10 @@
 import { useEffect, useState, useRef } from "react";
 
-import { setupWebcam, teardownWebcam } from "../lib/video";
 import { useAnimationFrame } from "../lib/hooks/animation";
-import { createKeyMap, drawHands } from "../lib/pose";
+import { setupWebcam, teardownWebcam } from "../lib/video";
+
+import { createKeyMap } from "../lib/pose";
+import { drawHands, drawPath } from "../lib/draw";
 import { euclideanDistance } from "../lib/utils";
 
 export async function setupCanvas(video, canvasID) {
@@ -19,12 +21,14 @@ export default function CanvasComponent({ detector, isModelLoaded }) {
   const videoRef = useRef(null);
   const [drawingCanvasCtx, setDrawingCanvasCtx] = useState(null);
   const [floatingCanvasCtx, setFloatingCanvasCtx] = useState(null);
+  const [indicatorCanvasCtx, setIndicatorCanvasCtx] = useState(null);
 
   const drawingPointsRef = useRef([]);
   const [brushSize, setBrushSize] = useState(2);
   const [isStreaming, setStreaming] = useState(false);
+  const [isDrawing, setDrawing] = useState(false);
 
-  const draw = (hands) => {
+  const drawIndicators = (hands) => {
     for (let i = 0; i < hands.length; i++) {
       const hand = hands[i];
       let indexKeypoint = hand.keypoints.index_finger_tip;
@@ -52,16 +56,19 @@ export default function CanvasComponent({ detector, isModelLoaded }) {
           ...drawingPointsRef.current,
           { x: indexKeypoint.x, y: indexKeypoint.y },
         ];
+        setDrawing(true);
 
-        drawingCanvasCtx.beginPath();
-        drawingCanvasCtx.arc(
+        indicatorCanvasCtx.beginPath();
+        indicatorCanvasCtx.arc(
           indexKeypoint.x,
           indexKeypoint.y,
           brushSize,
           0,
           2 * Math.PI
         );
-        drawingCanvasCtx.fill();
+        indicatorCanvasCtx.fill();
+      } else {
+        setDrawing(false);
       }
     }
   };
@@ -80,6 +87,10 @@ export default function CanvasComponent({ detector, isModelLoaded }) {
         const [, ctx] = await setupCanvas(videoRef.current, "float-canvas");
         setFloatingCanvasCtx(ctx);
       }
+      if (!indicatorCanvasCtx) {
+        const [, ctx] = await setupCanvas(videoRef.current, "indicator-canvas");
+        setIndicatorCanvasCtx(ctx);
+      }
       console.log("canvas setup!");
     }
 
@@ -95,6 +106,9 @@ export default function CanvasComponent({ detector, isModelLoaded }) {
       if (floatingCanvasCtx) {
         setFloatingCanvasCtx(null);
       }
+      if (indicatorCanvasCtx) {
+        setIndicatorCanvasCtx(null);
+      }
       console.log("canvas teardown!");
     }
 
@@ -104,6 +118,20 @@ export default function CanvasComponent({ detector, isModelLoaded }) {
       destroy();
     }
   }, [isStreaming]);
+
+  useEffect(() => {
+    if (!isDrawing && indicatorCanvasCtx) {
+      indicatorCanvasCtx.clearRect(
+        0,
+        0,
+        videoRef.current.width,
+        videoRef.current.height
+      );
+
+      drawPath(drawingPointsRef.current, drawingCanvasCtx);
+      drawingPointsRef.current = [];
+    }
+  }, [isDrawing]);
 
   useAnimationFrame(async (delta) => {
     let hands = await detector.estimateHands(videoRef.current, {
@@ -118,7 +146,7 @@ export default function CanvasComponent({ detector, isModelLoaded }) {
       videoRef.current.videoHeight
     );
     drawHands(hands, floatingCanvasCtx);
-    draw(hands);
+    drawIndicators(hands);
   }, isStreaming && isModelLoaded && !!videoRef.current);
 
   return (
@@ -160,13 +188,27 @@ export default function CanvasComponent({ detector, isModelLoaded }) {
             display: isStreaming ? "block" : "none",
             backgroundColor: "transparent",
             transform: "scaleX(-1)",
-            zIndex: 1,
+            zIndex: 2,
             borderRadius: "1rem",
             boxShadow: "0 3px 10px rgb(0 0 0 / 0.2)",
             width: "100%",
             height: "100%",
           }}
           id="draw-canvas"
+        />
+        <canvas
+          style={{
+            position: "absolute",
+            backgroundColor: "transparent",
+            display: isStreaming ? "block" : "none",
+            transform: "scaleX(-1)",
+            zIndex: 1,
+            borderRadius: "1rem",
+            boxShadow: "0 3px 10px rgb(0 0 0 / 0.2)",
+            width: "100%",
+            height: "100%",
+          }}
+          id="indicator-canvas"
         />
         <canvas
           style={{
