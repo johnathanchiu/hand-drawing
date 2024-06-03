@@ -1,44 +1,19 @@
-function simplifyPath(points, epsilon) {
-  // Find the point with the maximum distance
-  let dmax = 0;
-  let index = 0;
-  const end = points.length - 1;
-  for (let i = 1; i < end; i++) {
-    const d = perpendicularDistance(points[i], points[0], points[end]);
-    if (d > dmax) {
-      index = i;
-      dmax = d;
+export function chaikinSmoothing(path, iterations = 1) {
+  function chaikin(points) {
+    let newPoints = [];
+    for (let i = 0; i < points.length - 1; i++) {
+      let p0 = points[i];
+      let p1 = points[i + 1];
+      let Q = { x: 0.75 * p0.x + 0.25 * p1.x, y: 0.75 * p0.y + 0.25 * p1.y };
+      let R = { x: 0.25 * p0.x + 0.75 * p1.x, y: 0.25 * p0.y + 0.75 * p1.y };
+      newPoints.push(Q, R);
     }
+    return newPoints;
   }
 
-  // If max distance is greater than epsilon, recursively simplify
-  if (dmax > epsilon) {
-    const firstSegment = points.slice(0, index + 1);
-    const secondSegment = points.slice(index);
-    const simplifiedFirst = simplifyPath(firstSegment, epsilon);
-    const simplifiedSecond = simplifyPath(secondSegment, epsilon);
-    // Concatenate the simplified segments
-    return simplifiedFirst
-      .slice(0, simplifiedFirst.length - 1)
-      .concat(simplifiedSecond);
-  } else {
-    // Max distance is within tolerance, return the endpoints
-    return [points[0], points[end]];
+  let smoothedPath = path;
+  for (let i = 0; i < iterations; i++) {
+    smoothedPath = chaikin(smoothedPath);
   }
-}
-
-// Calculate perpendicular distance of a point from a line segment
-function perpendicularDistance(point, lineStart, lineEnd) {
-  const { x: x1, y: y1 } = lineStart;
-  const { x: x2, y: y2 } = lineEnd;
-  const { x: x, y: y } = point;
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const mag = dx * dx + dy * dy;
-  const dot = ((x - x1) * dx + (y - y1) * dy) / mag;
-  const closestX = x1 + dx * dot;
-  const closestY = y1 + dy * dot;
-  return Math.sqrt(
-    (x - closestX) * (x - closestX) + (y - closestY) * (y - closestY)
-  );
+  return smoothedPath;
 }

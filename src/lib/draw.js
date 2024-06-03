@@ -1,3 +1,5 @@
+import { chaikinSmoothing } from "./path";
+
 export const drawHands = (hands, ctx) => {
   if (hands.length <= 0) {
     return;
@@ -27,7 +29,11 @@ export const drawHands = (hands, ctx) => {
   }
 };
 
-export const drawPath = (points, ctx, closePath = false) => {
+export const drawPath = (points, ctx, doSmooth = true, closePath = false) => {
+  if (doSmooth) {
+    points = chaikinSmoothing(points, 3);
+  }
+
   ctx.beginPath();
   ctx.moveTo(points[0]?.x, points[0]?.y);
 
