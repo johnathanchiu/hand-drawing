@@ -1,0 +1,51 @@
+import { chaikinSmoothing } from "./path";
+
+export const drawHands = (hands, ctx) => {
+  if (hands.length <= 0) {
+    return;
+  }
+
+  for (let i = 0; i < hands.length; i++) {
+    let hand = hands[i];
+    ctx.fillStyle = hand.handedness === "Left" ? "black" : "blue";
+    ctx.strokeStyle = "White";
+    ctx.lineWidth = 2;
+
+    for (let key in hand.keypoints) {
+      const keypoint = hand.keypoints[key];
+      ctx.beginPath();
+      ctx.arc(keypoint.x, keypoint.y, 4, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+
+    // const fingers = Object.keys(FINGER_LOOKUP_INDICES);
+    // for (let z = 0; z < fingers.length; z++) {
+    //   const finger = fingers[z];
+    //   const points = FINGER_LOOKUP_INDICES[finger].map(
+    //     (idx) => hands[i].keypoints[idx]
+    //   );
+    //   drawPath(points, ctx);
+    // }
+  }
+};
+
+export const drawPath = (points, ctx, doSmooth = true, closePath = false) => {
+  if (doSmooth) {
+    points = chaikinSmoothing(points, 3);
+  }
+
+  ctx.beginPath();
+  ctx.moveTo(points[0]?.x, points[0]?.y);
+
+  for (let i = 1; i < points.length; i++) {
+    const point = points[i];
+    ctx.lineTo(point?.x, point?.y);
+    console.log("Drawing");
+  }
+
+  if (closePath) {
+    ctx.closePath();
+  }
+
+  ctx.stroke();
+};

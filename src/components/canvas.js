@@ -1,7 +1,10 @@
 import { useEffect, useState, useRef } from "react";
-import { setupWebcam, teardownWebcam } from "../lib/video";
+
 import { useAnimationFrame } from "../lib/hooks/animation";
-import { createKeyMap, drawHands } from "../lib/pose";
+import { setupWebcam, teardownWebcam } from "../lib/video";
+
+import { createKeyMap } from "../lib/pose";
+import { drawHands, drawPath } from "../lib/draw";
 import { euclideanDistance } from "../lib/utils";
 
 export async function setupCanvas(video, canvasID) {
@@ -11,20 +14,19 @@ export async function setupCanvas(video, canvasID) {
   canvas.width = video.width;
   canvas.height = video.height;
 
-  return ctx;
+  return [canvas, ctx];
 }
 
-export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
-  const [isStreaming, setStreaming] = useState(false);
-  const [brushSize, setBrushSize] = useState(2);
-  const [drawingPoints, setDrawingPoints] = useState([]);
-  const [isDrawing, setDrawing] = useState(false);
-  const [isDashed, setDashed] = useState(true);
+export default function CanvasComponent({ detector, isModelLoaded }) {
+  const videoRef = useRef(null);
+  const [drawingCanvasCtx, setDrawingCanvasCtx] = useState(null);
+  const [floatingCanvasCtx, setFloatingCanvasCtx] = useState(null);
+  const [indicatorCanvasCtx, setIndicatorCanvasCtx] = useState(null);
 
-  const [indicatorCtx, setIndicatorCtx] = useState(null);
-  const [drawCtx, setDrawCtx] = useState(null);
-  const [floatCtx, setFloatCtx] = useState(null);
-  const currentCanvasRef = useRef(null);
+  const drawingPointsRef = useRef([]);
+  const [brushSize, setBrushSize] = useState(2);
+  const [isStreaming, setStreaming] = useState(false);
+  const [isDrawing, setDrawing] = useState(false);
 
   const drawIndicators = (hands) => {
     for (let i = 0; i < hands.length; i++) {
@@ -35,95 +37,61 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
         euclideanDistance([
           [indexKeypoint.x, thumbKeypoint.x],
           [indexKeypoint.y, thumbKeypoint.y],
-        ]) < 20.0
+        ]) < 25.0
       ) {
-        setDrawingPoints((previousState) => [
-          ...previousState,
+        if (drawingPointsRef.current.length > 0) {
+          let previousPoint =
+            drawingPointsRef.current[drawingPointsRef.current.length - 1];
+          if (
+            euclideanDistance([
+              [indexKeypoint.x, previousPoint.x],
+              [indexKeypoint.y, previousPoint.y],
+            ]) < 10.0
+          ) {
+            return;
+          }
+        }
+
+        drawingPointsRef.current = [
+          ...drawingPointsRef.current,
           { x: indexKeypoint.x, y: indexKeypoint.y },
-        ]);
+        ];
         setDrawing(true);
 
-        currentCanvasRef.current.beginPath();
-        currentCanvasRef.current.arc(
+        indicatorCanvasCtx.beginPath();
+        indicatorCanvasCtx.arc(
           indexKeypoint.x,
           indexKeypoint.y,
           brushSize,
           0,
           2 * Math.PI
         );
-        currentCanvasRef.current.fill();
+        indicatorCanvasCtx.fill();
       } else {
         setDrawing(false);
       }
     }
   };
 
-  const draw = (points) => {
-    drawCtx.beginPath();
-    drawCtx.moveTo(points[0].x, points[0].y);
-
-    if (points.length === 2) {
-      // For two points, just draw a straight line
-      drawCtx.lineTo(points[1].x, points[1].y);
-      return;
-    }
-
-    for (let i = 1; i < points.length - 2; i += 2) {
-      if (i + 2 < points.length) {
-        drawCtx.bezierCurveTo(
-          points[i].x,
-          points[i].y,
-          points[i + 1].x,
-          points[i + 1].y,
-          points[i + 2].x,
-          points[i + 2].y
-        );
-      }
-    }
-
-    // If there are an odd number of points, handle the last segment
-    if (points.length % 2 === 0) {
-      let lastPoint = points[points.length - 1];
-      drawCtx.lineTo(lastPoint.x, lastPoint.y);
-    } else {
-      let cp = points[points.length - 2];
-      let endPoint = points[points.length - 1];
-      drawCtx.quadraticCurveTo(cp.x, cp.y, endPoint.x, endPoint.y);
-    }
-
-    drawCtx.stroke();
-  };
-
   useEffect(() => {
     async function initialize() {
       if (!videoRef.current) {
         videoRef.current = await setupWebcam();
-        console.log("webcam setup!");
       }
-      if (!drawCtx || !floatCtx || !indicatorCtx) {
-        const drawingCanvas = await setupCanvas(
-          videoRef.current,
-          "draw-canvas"
-        );
-        const floatingCanvas = await setupCanvas(
-          videoRef.current,
-          "float-canvas"
-        );
-        const indicatorCanvas = await setupCanvas(
-          videoRef.current,
-          "indicator-canvas"
-        );
-        setDrawCtx(drawingCanvas);
-        setFloatCtx(floatingCanvas);
-        setIndicatorCtx(indicatorCanvas);
-
-        if (isDashed) {
-          currentCanvasRef.current = drawingCanvas;
-        } else {
-          currentCanvasRef.current = indicatorCanvas;
-        }
-        console.log("canvas setup!");
+      console.log("webcam setup!");
+      if (!drawingCanvasCtx) {
+        const [, ctx] = await setupCanvas(videoRef.current, "draw-canvas");
+        setDrawingCanvasCtx(ctx);
       }
+      if (!floatingCanvasCtx) {
+        const [, ctx] = await setupCanvas(videoRef.current, "float-canvas");
+        setFloatingCanvasCtx(ctx);
+      }
+      if (!indicatorCanvasCtx) {
+        const [, ctx] = await setupCanvas(videoRef.current, "indicator-canvas");
+        setIndicatorCanvasCtx(ctx);
+      }
+      console.log("canvas setup!");
     }
 
     async function destroy() {
@@ -132,12 +100,16 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
         videoRef.current = null;
         console.log("webcam teardown!");
       }
-      if (drawCtx || floatCtx || indicatorCtx) {
-        setDrawCtx(null);
-        setFloatCtx(null);
-        setIndicatorCtx(null);
-        console.log("canvas teardown!");
+      if (drawingCanvasCtx) {
+        setDrawingCanvasCtx(null);
       }
+      if (floatingCanvasCtx) {
+        setFloatingCanvasCtx(null);
+      }
+      if (indicatorCanvasCtx) {
+        setIndicatorCanvasCtx(null);
+      }
+      console.log("canvas teardown!");
     }
 
     if (isStreaming) {
@@ -148,12 +120,18 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
   }, [isStreaming]);
 
   useEffect(() => {
-    if (isDashed) {
-      currentCanvasRef.current = drawCtx;
-    } else {
-      currentCanvasRef.current = indicatorCtx;
+    if (!isDrawing && indicatorCanvasCtx) {
+      indicatorCanvasCtx.clearRect(
+        0,
+        0,
+        videoRef.current.width,
+        videoRef.current.height
+      );
+
+      drawPath(drawingPointsRef.current, drawingCanvasCtx);
+      drawingPointsRef.current = [];
     }
-  }, [isDashed]);
+  }, [isDrawing]);
 
   useAnimationFrame(async (delta) => {
     let hands = await detector.estimateHands(videoRef.current, {
@@ -161,35 +139,15 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
     });
     hands = createKeyMap(hands);
 
-    floatCtx.clearRect(
+    floatingCanvasCtx.clearRect(
       0,
       0,
       videoRef.current.videoWidth,
       videoRef.current.videoHeight
     );
-    drawHands(hands, floatCtx);
+    drawHands(hands, floatingCanvasCtx);
     drawIndicators(hands);
-  }, !!(isStreaming && isModelLoaded && videoRef.current));
-
-  useEffect(() => {
-    if (!isDrawing) {
-      if (indicatorCtx) {
-        indicatorCtx.clearRect(
-          0,
-          0,
-          videoRef.current.width,
-          videoRef.current.height
-        );
-      }
-
-      if (!isDashed) {
-        if (drawingPoints.length >= 2) {
-          draw(drawingPoints);
-        }
-      }
-      setDrawingPoints([]);
-    }
-  }, [isDrawing]);
+  }, isStreaming && isModelLoaded && !!videoRef.current);
 
   return (
     <div className="flex h-screen">
@@ -197,7 +155,7 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
       <div className="bg-gray-200 w-1/12 p-4">
         {isModelLoaded && videoRef && (
           <button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4 w-full"
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4"
             onClick={() => {
               setStreaming((prevState) => !prevState);
             }}
@@ -206,39 +164,19 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
           </button>
         )}
         {isStreaming && (
-          <div>
-            <button
-              className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mt-4 w-full"
-              onClick={() => {
-                drawCtx.clearRect(
-                  0,
-                  0,
-                  videoRef.current.width,
-                  videoRef.current.height
-                );
-                indicatorCtx.clearRect(
-                  0,
-                  0,
-                  videoRef.current.width,
-                  videoRef.current.height
-                );
-              }}
-            >
-              Clear Canvas!
-            </button>
-            <button
-              className={`text-white font-bold py-2 px-4 rounded mt-4 w-full ${
-                isDashed
-                  ? "bg-green-500 hover:bg-green-700"
-                  : "bg-gray-500 hover:bg-gray-700"
-              }`}
-              onClick={() => {
-                setDashed((prevState) => !prevState);
-              }}
-            >
-              {isDashed ? "Solid" : "Dashed"}
-            </button>
-          </div>
+          <button
+            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mt-4"
+            onClick={() => {
+              drawingCanvasCtx.clearRect(
+                0,
+                0,
+                videoRef.current.width,
+                videoRef.current.height
+              );
+            }}
+          >
+            Clear Canvas!
+          </button>
         )}
       </div>
 
@@ -247,8 +185,8 @@ export default function CanvasComponent({ videoRef, detector, isModelLoaded }) {
         <canvas
           style={{
             position: "absolute",
-            backgroundColor: "transparent",
             display: isStreaming ? "block" : "none",
+            backgroundColor: "transparent",
             transform: "scaleX(-1)",
             zIndex: 2,
             borderRadius: "1rem",
