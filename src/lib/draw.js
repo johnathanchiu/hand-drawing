@@ -51,6 +51,19 @@ export function drawRectangle(points, ctx) {
   ctx.stroke();
 }
 
+export function drawIndicationPath(points, ctx, brushSize) {
+  let length = points.length;
+
+  ctx.arc(
+    points[length - 1].x,
+    points[length - 1].y,
+    brushSize,
+    0,
+    2 * Math.PI
+  );
+  ctx.fill();
+}
+
 export function drawPath(points, ctx, doSmooth = true, closePath = false) {
   if (doSmooth) {
     points = chaikinSmoothing(points, 3);

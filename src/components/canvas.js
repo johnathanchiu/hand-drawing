@@ -3,11 +3,11 @@ import { useEffect, useState, useRef } from "react";
 import { useAnimationFrame } from "../lib/hooks/animation";
 import { setupWebcam, teardownWebcam } from "../lib/video";
 
-import FloatingMenu from "./menu";
+import FloatingMenu, { ObjectShape } from "./menu";
 import { drawDiagonal, drawLine } from "../lib/hooks/simulation";
 import { createKeyMap } from "../lib/pose";
-import { drawHands, drawPath, drawRectangle, drawCircle } from "../lib/draw";
 import { euclideanDistance } from "../lib/utils";
+import { drawHands, drawPath, drawRectangle, drawCircle } from "../lib/draw";
 
 export async function setupCanvas(video, canvasID) {
   const canvas = document.getElementById(canvasID);
@@ -29,10 +29,12 @@ export default function CanvasComponent({
   const [floatingCanvasCtx, setFloatingCanvasCtx] = useState(null);
   const [indicatorCanvasCtx, setIndicatorCanvasCtx] = useState(null);
 
-  const drawingPointsRef = useRef([]);
-  const [brushSize, setBrushSize] = useState(2);
   const [isStreaming, setStreaming] = useState(false);
   const [isDrawing, setDrawing] = useState(false);
+
+  const drawingPointsRef = useRef([]);
+  const objectModeRef = useRef(ObjectShape.LINE);
+  const [brushSize, setBrushSize] = useState(2);
 
   const simulationHandsIdxRef = useRef(0);
 
@@ -81,49 +83,22 @@ export default function CanvasComponent({
           );
         }
 
-        // let rectWidth =
-        //   drawingPointsRef.current[drawingPointsLength - 1].x -
-        //   drawingPointsRef.current[0].x;
-        // let rectHeight =
-        //   drawingPointsRef.current[drawingPointsLength - 1].y -
-        //   drawingPointsRef.current[0].y;
-        // indicatorCanvasCtx.beginPath();
-        // indicatorCanvasCtx.rect(
-        //   drawingPointsRef.current[0].x,
-        //   drawingPointsRef.current[0].y,
-        //   rectWidth,
-        //   rectHeight
-        // );
-        // indicatorCanvasCtx.stroke();
+        console.log("drawing indic", objectModeRef.current);
 
-        let radius = euclideanDistance([
-          [
-            drawingPointsRef.current[drawingPointsLength - 1].x,
-            drawingPointsRef.current[0].x,
-          ],
-          [
-            drawingPointsRef.current[drawingPointsLength - 1].y,
-            drawingPointsRef.current[0].y,
-          ],
-        ]);
-        indicatorCanvasCtx.beginPath();
-        indicatorCanvasCtx.arc(
-          drawingPointsRef.current[0].x,
-          drawingPointsRef.current[0].y,
-          radius,
-          0,
-          2 * Math.PI
-        );
-        indicatorCanvasCtx.stroke();
-
-        // indicatorCanvasCtx.arc(
-        //   indexKeypoint.x,
-        //   indexKeypoint.y,
-        //   brushSize,
-        //   0,
-        //   2 * Math.PI
-        // );
-        // indicatorCanvasCtx.fill();
+        switch (objectModeRef.current) {
+          case ObjectShape.CIRCLE:
+            drawCircle(drawingPointsRef.current, indicatorCanvasCtx);
+            break;
+          case ObjectShape.RECTANGLE:
+            drawRectangle(drawingPointsRef.current, indicatorCanvasCtx);
+            break;
+          case ObjectShape.LINE:
+            // TODO: See if drawIndicatorPath is better
+            drawPath(drawingPointsRef.current, indicatorCanvasCtx);
+            break;
+          default:
+            drawPath(drawingPointsRef.current, indicatorCanvasCtx);
+        }
       } else {
         setDrawing(false);
       }
@@ -185,9 +160,22 @@ export default function CanvasComponent({
         videoRef.current.height
       );
 
-      // drawPath(drawingPointsRef.current, drawingCanvasCtx);
-      // drawRectangle(drawingPointsRef.current, drawingCanvasCtx);
-      drawCircle(drawingPointsRef.current, drawingCanvasCtx);
+      console.log("drawing full", objectModeRef.current);
+
+      switch (objectModeRef.current) {
+        case ObjectShape.CIRCLE:
+          drawCircle(drawingPointsRef.current, drawingCanvasCtx);
+          break;
+        case ObjectShape.RECTANGLE:
+          drawRectangle(drawingPointsRef.current, drawingCanvasCtx);
+          break;
+        case ObjectShape.LINE:
+          drawPath(drawingPointsRef.current, drawingCanvasCtx);
+          break;
+        default:
+          drawPath(drawingPointsRef.current, drawingCanvasCtx);
+      }
+
       drawingPointsRef.current = [];
     }
   }, [isDrawing]);
@@ -230,6 +218,7 @@ export default function CanvasComponent({
         setStreaming={setStreaming}
         videoRef={videoRef}
         isModelLoaded={isModelLoaded}
+        objectModeRef={objectModeRef}
       />
       <canvas
         style={{
