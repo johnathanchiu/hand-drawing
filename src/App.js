@@ -1,4 +1,5 @@
 import "./App.css";
+import "@fortawesome/fontawesome-free/css/all.min.css";
 
 import "@tensorflow/tfjs-backend-webgl";
 import * as handPoseDetection from "@tensorflow-models/hand-pose-detection";
@@ -8,7 +9,7 @@ import { Analytics } from "@vercel/analytics/react";
 
 let detector;
 
-const DEV_MODE = true;
+const DEV_MODE = false;
 
 function App() {
   // const [fingerTracker, setFingerTracker] = useState(null);
