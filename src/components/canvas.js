@@ -6,7 +6,7 @@ import { setupWebcam, teardownWebcam } from "../lib/video";
 import FloatingMenu from "./menu";
 import { drawDiagonal, drawLine } from "../lib/hooks/simulation";
 import { createKeyMap } from "../lib/pose";
-import { drawHands, drawPath, drawRectangle } from "../lib/draw";
+import { drawHands, drawPath, drawRectangle, drawCircle } from "../lib/draw";
 import { euclideanDistance } from "../lib/utils";
 
 export async function setupCanvas(video, canvasID) {
@@ -19,10 +19,11 @@ export async function setupCanvas(video, canvasID) {
   return [canvas, ctx];
 }
 
-export default function CanvasComponent(
-  { detector, isModelLoaded },
-  development = false
-) {
+export default function CanvasComponent({
+  detector,
+  isModelLoaded,
+  development,
+}) {
   const videoRef = useRef(null);
   const [drawingCanvasCtx, setDrawingCanvasCtx] = useState(null);
   const [floatingCanvasCtx, setFloatingCanvasCtx] = useState(null);
@@ -80,18 +81,38 @@ export default function CanvasComponent(
           );
         }
 
-        let rectWidth =
-          drawingPointsRef.current[drawingPointsLength - 1].x -
-          drawingPointsRef.current[0].x;
-        let rectHeight =
-          drawingPointsRef.current[drawingPointsLength - 1].y -
-          drawingPointsRef.current[0].y;
+        // let rectWidth =
+        //   drawingPointsRef.current[drawingPointsLength - 1].x -
+        //   drawingPointsRef.current[0].x;
+        // let rectHeight =
+        //   drawingPointsRef.current[drawingPointsLength - 1].y -
+        //   drawingPointsRef.current[0].y;
+        // indicatorCanvasCtx.beginPath();
+        // indicatorCanvasCtx.rect(
+        //   drawingPointsRef.current[0].x,
+        //   drawingPointsRef.current[0].y,
+        //   rectWidth,
+        //   rectHeight
+        // );
+        // indicatorCanvasCtx.stroke();
+
+        let radius = euclideanDistance([
+          [
+            drawingPointsRef.current[drawingPointsLength - 1].x,
+            drawingPointsRef.current[0].x,
+          ],
+          [
+            drawingPointsRef.current[drawingPointsLength - 1].y,
+            drawingPointsRef.current[0].y,
+          ],
+        ]);
         indicatorCanvasCtx.beginPath();
-        indicatorCanvasCtx.rect(
+        indicatorCanvasCtx.arc(
           drawingPointsRef.current[0].x,
           drawingPointsRef.current[0].y,
-          rectWidth,
-          rectHeight
+          radius,
+          0,
+          2 * Math.PI
         );
         indicatorCanvasCtx.stroke();
 
@@ -165,7 +186,8 @@ export default function CanvasComponent(
       );
 
       // drawPath(drawingPointsRef.current, drawingCanvasCtx);
-      drawRectangle(drawingPointsRef.current, drawingCanvasCtx);
+      // drawRectangle(drawingPointsRef.current, drawingCanvasCtx);
+      drawCircle(drawingPointsRef.current, drawingCanvasCtx);
       drawingPointsRef.current = [];
     }
   }, [isDrawing]);

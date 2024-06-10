@@ -53,7 +53,11 @@ function App() {
         </div>
       </div>
       {/* Canvas & Menu */}
-      <CanvasComponent detector={detector} isModelLoaded={isModelLoaded} />
+      <CanvasComponent
+        detector={detector}
+        isModelLoaded={isModelLoaded}
+        development={DEV_MODE}
+      />
     </div>
   );
 }

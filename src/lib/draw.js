@@ -1,6 +1,7 @@
 import { chaikinSmoothing } from "./path";
+import { euclideanDistance } from "./utils";
 
-export const drawHands = (hands, ctx) => {
+export function drawHands(hands, ctx) {
   if (hands.length <= 0) {
     return;
   }
@@ -27,7 +28,18 @@ export const drawHands = (hands, ctx) => {
     //   drawPath(points, ctx);
     // }
   }
-};
+}
+
+export function drawCircle(points, ctx) {
+  let length = points.length;
+  let radius = euclideanDistance([
+    [points[length - 1].x, points[0].x],
+    [points[length - 1].y, points[0].y],
+  ]);
+  ctx.beginPath();
+  ctx.arc(points[0].x, points[0].y, radius, 0, 2 * Math.PI);
+  ctx.stroke();
+}
 
 export function drawRectangle(points, ctx) {
   let length = points.length;
