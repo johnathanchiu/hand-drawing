@@ -3,9 +3,11 @@ import { useEffect, useState, useRef } from "react";
 import { useAnimationFrame } from "../lib/hooks/animation";
 import { setupWebcam, teardownWebcam } from "../lib/video";
 
+import FloatingMenu, { ObjectShape } from "./menu";
+import { drawDiagonal, drawLine } from "../lib/hooks/simulation";
 import { createKeyMap } from "../lib/pose";
-import { drawHands, drawPath } from "../lib/draw";
 import { euclideanDistance } from "../lib/utils";
+import { drawHands, drawPath, drawRectangle, drawCircle } from "../lib/draw";
 
 export async function setupCanvas(video, canvasID) {
   const canvas = document.getElementById(canvasID);
@@ -17,18 +19,31 @@ export async function setupCanvas(video, canvasID) {
   return [canvas, ctx];
 }
 
-export default function CanvasComponent({ detector, isModelLoaded }) {
+export default function CanvasComponent({
+  detector,
+  isModelLoaded,
+  development,
+}) {
   const videoRef = useRef(null);
   const [drawingCanvasCtx, setDrawingCanvasCtx] = useState(null);
   const [floatingCanvasCtx, setFloatingCanvasCtx] = useState(null);
   const [indicatorCanvasCtx, setIndicatorCanvasCtx] = useState(null);
 
-  const drawingPointsRef = useRef([]);
-  const [brushSize, setBrushSize] = useState(2);
   const [isStreaming, setStreaming] = useState(false);
   const [isDrawing, setDrawing] = useState(false);
 
+  const drawingPointsRef = useRef([]);
+  const objectModeRef = useRef(ObjectShape.LINE);
+  const [brushSize, setBrushSize] = useState(2);
+
+  const simulationHandsIdxRef = useRef(0);
+
   const drawIndicators = (hands) => {
+    if (hands.length < 1) {
+      setDrawing(false);
+      return;
+    }
+
     for (let i = 0; i < hands.length; i++) {
       const hand = hands[i];
       let indexKeypoint = hand.keypoints.index_finger_tip;
@@ -58,15 +73,32 @@ export default function CanvasComponent({ detector, isModelLoaded }) {
         ];
         setDrawing(true);
 
-        indicatorCanvasCtx.beginPath();
-        indicatorCanvasCtx.arc(
-          indexKeypoint.x,
-          indexKeypoint.y,
-          brushSize,
-          0,
-          2 * Math.PI
-        );
-        indicatorCanvasCtx.fill();
+        let drawingPointsLength = drawingPointsRef.current.length;
+        if (drawingPointsLength > 2) {
+          indicatorCanvasCtx.clearRect(
+            0,
+            0,
+            videoRef.current.width,
+            videoRef.current.height
+          );
+        }
+
+        console.log("drawing indic", objectModeRef.current);
+
+        switch (objectModeRef.current) {
+          case ObjectShape.CIRCLE:
+            drawCircle(drawingPointsRef.current, indicatorCanvasCtx);
+            break;
+          case ObjectShape.RECTANGLE:
+            drawRectangle(drawingPointsRef.current, indicatorCanvasCtx);
+            break;
+          case ObjectShape.LINE:
+            // TODO: See if drawIndicatorPath is better
+            drawPath(drawingPointsRef.current, indicatorCanvasCtx);
+            break;
+          default:
+            drawPath(drawingPointsRef.current, indicatorCanvasCtx);
+        }
       } else {
         setDrawing(false);
       }
@@ -128,16 +160,45 @@ export default function CanvasComponent({ detector, isModelLoaded }) {
         videoRef.current.height
       );
 
-      drawPath(drawingPointsRef.current, drawingCanvasCtx);
+      console.log("drawing full", objectModeRef.current);
+
+      switch (objectModeRef.current) {
+        case ObjectShape.CIRCLE:
+          drawCircle(drawingPointsRef.current, drawingCanvasCtx);
+          break;
+        case ObjectShape.RECTANGLE:
+          drawRectangle(drawingPointsRef.current, drawingCanvasCtx);
+          break;
+        case ObjectShape.LINE:
+          drawPath(drawingPointsRef.current, drawingCanvasCtx);
+          break;
+        default:
+          drawPath(drawingPointsRef.current, drawingCanvasCtx);
+      }
+
       drawingPointsRef.current = [];
     }
   }, [isDrawing]);
 
   useAnimationFrame(async (delta) => {
-    let hands = await detector.estimateHands(videoRef.current, {
-      flipHorizontal: false,
-    });
-    hands = createKeyMap(hands);
+    let hands;
+    if (!development) {
+      hands = await detector.estimateHands(videoRef.current, {
+        flipHorizontal: false,
+      });
+      hands = createKeyMap(hands);
+    } else {
+      let simHands = drawDiagonal();
+      if (simulationHandsIdxRef.current < simHands.length) {
+        hands = [simHands[simulationHandsIdxRef.current]];
+      } else {
+        hands = [];
+      }
+      simulationHandsIdxRef.current = Math.min(
+        simulationHandsIdxRef.current + 1,
+        simHands.length
+      );
+    }
 
     floatingCanvasCtx.clearRect(
       0,
@@ -151,93 +212,69 @@ export default function CanvasComponent({ detector, isModelLoaded }) {
 
   return (
     <div className="flex h-screen">
-      {/* Left Menu Bar */}
-      <div className="bg-gray-200 w-1/12 p-4">
-        {isModelLoaded && videoRef && (
-          <button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4"
-            onClick={() => {
-              setStreaming((prevState) => !prevState);
-            }}
-          >
-            {isStreaming ? "Stop Drawing" : "Start Drawing"}
-          </button>
-        )}
-        {isStreaming && (
-          <button
-            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mt-4"
-            onClick={() => {
-              drawingCanvasCtx.clearRect(
-                0,
-                0,
-                videoRef.current.width,
-                videoRef.current.height
-              );
-            }}
-          >
-            Clear Canvas!
-          </button>
-        )}
-      </div>
-
-      {/* Right Content Area */}
-      <div className="flex-1 flex justify-center items-center p-4 relative">
-        <canvas
-          style={{
-            position: "absolute",
-            display: isStreaming ? "block" : "none",
-            backgroundColor: "transparent",
-            transform: "scaleX(-1)",
-            zIndex: 2,
-            borderRadius: "1rem",
-            boxShadow: "0 3px 10px rgb(0 0 0 / 0.2)",
-            width: "100%",
-            height: "100%",
-          }}
-          id="draw-canvas"
-        />
-        <canvas
-          style={{
-            position: "absolute",
-            backgroundColor: "transparent",
-            display: isStreaming ? "block" : "none",
-            transform: "scaleX(-1)",
-            zIndex: 1,
-            borderRadius: "1rem",
-            boxShadow: "0 3px 10px rgb(0 0 0 / 0.2)",
-            width: "100%",
-            height: "100%",
-          }}
-          id="indicator-canvas"
-        />
-        <canvas
-          style={{
-            position: "absolute",
-            backgroundColor: "white",
-            display: isStreaming ? "block" : "none",
-            transform: "scaleX(-1)",
-            zIndex: 0,
-            borderRadius: "1rem",
-            boxShadow: "0 3px 10px rgb(0 0 0 / 0.2)",
-            width: "100%",
-            height: "100%",
-          }}
-          id="float-canvas"
-        />
-        <video
-          style={{
-            display: isStreaming ? "block" : "none",
-            transform: "scaleX(-1)",
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: 0,
-            height: 0,
-          }}
-          id="video"
-          playsInline
-        />
-      </div>
+      <FloatingMenu
+        drawingCanvasCtx={drawingCanvasCtx}
+        isStreaming={isStreaming}
+        setStreaming={setStreaming}
+        videoRef={videoRef}
+        isModelLoaded={isModelLoaded}
+        objectModeRef={objectModeRef}
+      />
+      <canvas
+        style={{
+          position: "absolute",
+          display: isStreaming ? "block" : "none",
+          backgroundColor: "transparent",
+          transform: "scaleX(-1)",
+          zIndex: 2,
+          borderRadius: "1rem",
+          boxShadow: "0 3px 10px rgb(0 0 0 / 0.2)",
+          width: "100%",
+          height: "100%",
+        }}
+        id="draw-canvas"
+      />
+      <canvas
+        style={{
+          position: "absolute",
+          backgroundColor: "transparent",
+          display: isStreaming ? "block" : "none",
+          transform: "scaleX(-1)",
+          zIndex: 1,
+          borderRadius: "1rem",
+          boxShadow: "0 3px 10px rgb(0 0 0 / 0.2)",
+          width: "100%",
+          height: "100%",
+        }}
+        id="indicator-canvas"
+      />
+      <canvas
+        style={{
+          position: "absolute",
+          backgroundColor: "white",
+          display: isStreaming ? "block" : "none",
+          transform: "scaleX(-1)",
+          zIndex: 0,
+          borderRadius: "1rem",
+          boxShadow: "0 3px 10px rgb(0 0 0 / 0.2)",
+          width: "100%",
+          height: "100%",
+        }}
+        id="float-canvas"
+      />
+      <video
+        style={{
+          display: isStreaming ? "block" : "none",
+          transform: "scaleX(-1)",
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: 0,
+          height: 0,
+        }}
+        id="video"
+        playsInline
+      />
     </div>
   );
 }

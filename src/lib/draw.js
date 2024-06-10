@@ -1,6 +1,7 @@
 import { chaikinSmoothing } from "./path";
+import { euclideanDistance } from "./utils";
 
-export const drawHands = (hands, ctx) => {
+export function drawHands(hands, ctx) {
   if (hands.length <= 0) {
     return;
   }
@@ -27,9 +28,43 @@ export const drawHands = (hands, ctx) => {
     //   drawPath(points, ctx);
     // }
   }
-};
+}
 
-export const drawPath = (points, ctx, doSmooth = true, closePath = false) => {
+export function drawCircle(points, ctx) {
+  let length = points.length;
+  let radius = euclideanDistance([
+    [points[length - 1].x, points[0].x],
+    [points[length - 1].y, points[0].y],
+  ]);
+  ctx.beginPath();
+  ctx.arc(points[0].x, points[0].y, radius, 0, 2 * Math.PI);
+  ctx.stroke();
+}
+
+export function drawRectangle(points, ctx) {
+  let length = points.length;
+  let rectWidth = points[length - 1].x - points[0].x;
+  let rectHeight = points[length - 1].y - points[0].y;
+
+  ctx.beginPath();
+  ctx.rect(points[0].x, points[0].y, rectWidth, rectHeight);
+  ctx.stroke();
+}
+
+export function drawIndicationPath(points, ctx, brushSize) {
+  let length = points.length;
+
+  ctx.arc(
+    points[length - 1].x,
+    points[length - 1].y,
+    brushSize,
+    0,
+    2 * Math.PI
+  );
+  ctx.fill();
+}
+
+export function drawPath(points, ctx, doSmooth = true, closePath = false) {
   if (doSmooth) {
     points = chaikinSmoothing(points, 3);
   }
@@ -48,4 +83,4 @@ export const drawPath = (points, ctx, doSmooth = true, closePath = false) => {
   }
 
   ctx.stroke();
-};
+}
