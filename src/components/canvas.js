@@ -4,9 +4,9 @@ import { useAnimationFrame } from "../lib/hooks/animation";
 import { setupWebcam, teardownWebcam } from "../lib/video";
 
 import FloatingMenu from "./menu";
-import { drawLine } from "../lib/hooks/simulation";
+import { drawDiagonal, drawLine } from "../lib/hooks/simulation";
 import { createKeyMap } from "../lib/pose";
-import { drawHands, drawPath } from "../lib/draw";
+import { drawHands, drawPath, drawRectangle } from "../lib/draw";
 import { euclideanDistance } from "../lib/utils";
 
 export async function setupCanvas(video, canvasID) {
@@ -70,15 +70,39 @@ export default function CanvasComponent(
         ];
         setDrawing(true);
 
+        let drawingPointsLength = drawingPointsRef.current.length;
+        if (drawingPointsLength > 2) {
+          indicatorCanvasCtx.clearRect(
+            0,
+            0,
+            videoRef.current.width,
+            videoRef.current.height
+          );
+        }
+
+        let rectWidth =
+          drawingPointsRef.current[drawingPointsLength - 1].x -
+          drawingPointsRef.current[0].x;
+        let rectHeight =
+          drawingPointsRef.current[drawingPointsLength - 1].y -
+          drawingPointsRef.current[0].y;
         indicatorCanvasCtx.beginPath();
-        indicatorCanvasCtx.arc(
-          indexKeypoint.x,
-          indexKeypoint.y,
-          brushSize,
-          0,
-          2 * Math.PI
+        indicatorCanvasCtx.rect(
+          drawingPointsRef.current[0].x,
+          drawingPointsRef.current[0].y,
+          rectWidth,
+          rectHeight
         );
-        indicatorCanvasCtx.fill();
+        indicatorCanvasCtx.stroke();
+
+        // indicatorCanvasCtx.arc(
+        //   indexKeypoint.x,
+        //   indexKeypoint.y,
+        //   brushSize,
+        //   0,
+        //   2 * Math.PI
+        // );
+        // indicatorCanvasCtx.fill();
       } else {
         setDrawing(false);
       }
@@ -140,7 +164,8 @@ export default function CanvasComponent(
         videoRef.current.height
       );
 
-      drawPath(drawingPointsRef.current, drawingCanvasCtx);
+      // drawPath(drawingPointsRef.current, drawingCanvasCtx);
+      drawRectangle(drawingPointsRef.current, drawingCanvasCtx);
       drawingPointsRef.current = [];
     }
   }, [isDrawing]);
@@ -153,7 +178,7 @@ export default function CanvasComponent(
       });
       hands = createKeyMap(hands);
     } else {
-      let simHands = drawLine();
+      let simHands = drawDiagonal();
       if (simulationHandsIdxRef.current < simHands.length) {
         hands = [simHands[simulationHandsIdxRef.current]];
       } else {

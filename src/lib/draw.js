@@ -29,7 +29,17 @@ export const drawHands = (hands, ctx) => {
   }
 };
 
-export const drawPath = (points, ctx, doSmooth = true, closePath = false) => {
+export function drawRectangle(points, ctx) {
+  let length = points.length;
+  let rectWidth = points[length - 1].x - points[0].x;
+  let rectHeight = points[length - 1].y - points[0].y;
+
+  ctx.beginPath();
+  ctx.rect(points[0].x, points[0].y, rectWidth, rectHeight);
+  ctx.stroke();
+}
+
+export function drawPath(points, ctx, doSmooth = true, closePath = false) {
   if (doSmooth) {
     points = chaikinSmoothing(points, 3);
   }
@@ -48,4 +58,4 @@ export const drawPath = (points, ctx, doSmooth = true, closePath = false) => {
   }
 
   ctx.stroke();
-};
+}
