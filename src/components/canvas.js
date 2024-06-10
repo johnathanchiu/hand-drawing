@@ -4,6 +4,7 @@ import { useAnimationFrame } from "../lib/hooks/animation";
 import { setupWebcam, teardownWebcam } from "../lib/video";
 
 import FloatingMenu from "./menu";
+import { drawLine } from "../lib/hooks/simulation";
 import { createKeyMap } from "../lib/pose";
 import { drawHands, drawPath } from "../lib/draw";
 import { euclideanDistance } from "../lib/utils";
@@ -18,7 +19,10 @@ export async function setupCanvas(video, canvasID) {
   return [canvas, ctx];
 }
 
-export default function CanvasComponent({ detector, isModelLoaded }) {
+export default function CanvasComponent(
+  { detector, isModelLoaded },
+  development = false
+) {
   const videoRef = useRef(null);
   const [drawingCanvasCtx, setDrawingCanvasCtx] = useState(null);
   const [floatingCanvasCtx, setFloatingCanvasCtx] = useState(null);
@@ -29,7 +33,14 @@ export default function CanvasComponent({ detector, isModelLoaded }) {
   const [isStreaming, setStreaming] = useState(false);
   const [isDrawing, setDrawing] = useState(false);
 
+  const simulationHandsIdxRef = useRef(0);
+
   const drawIndicators = (hands) => {
+    if (hands.length < 1) {
+      setDrawing(false);
+      return;
+    }
+
     for (let i = 0; i < hands.length; i++) {
       const hand = hands[i];
       let indexKeypoint = hand.keypoints.index_finger_tip;
@@ -135,10 +146,24 @@ export default function CanvasComponent({ detector, isModelLoaded }) {
   }, [isDrawing]);
 
   useAnimationFrame(async (delta) => {
-    let hands = await detector.estimateHands(videoRef.current, {
-      flipHorizontal: false,
-    });
-    hands = createKeyMap(hands);
+    let hands;
+    if (!development) {
+      hands = await detector.estimateHands(videoRef.current, {
+        flipHorizontal: false,
+      });
+      hands = createKeyMap(hands);
+    } else {
+      let simHands = drawLine();
+      if (simulationHandsIdxRef.current < simHands.length) {
+        hands = [simHands[simulationHandsIdxRef.current]];
+      } else {
+        hands = [];
+      }
+      simulationHandsIdxRef.current = Math.min(
+        simulationHandsIdxRef.current + 1,
+        simHands.length
+      );
+    }
 
     floatingCanvasCtx.clearRect(
       0,

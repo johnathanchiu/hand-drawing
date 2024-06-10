@@ -8,6 +8,8 @@ import { Analytics } from "@vercel/analytics/react";
 
 let detector;
 
+const DEV_MODE = true;
+
 function App() {
   // const [fingerTracker, setFingerTracker] = useState(null);
   const [isModelLoaded, setModelLoaded] = useState(false);
@@ -15,15 +17,17 @@ function App() {
   useEffect(() => {
     async function setupModel() {
       console.log("model loading...");
-      detector = await handPoseDetection.createDetector(
-        handPoseDetection.SupportedModels.MediaPipeHands,
-        {
-          // runtime: "tfjs",
-          modelType: "full",
-          runtime: "mediapipe",
-          solutionPath: `https://cdn.jsdelivr.net/npm/@mediapipe/hands`,
-        }
-      );
+      if (!DEV_MODE) {
+        detector = await handPoseDetection.createDetector(
+          handPoseDetection.SupportedModels.MediaPipeHands,
+          {
+            // runtime: "tfjs",
+            modelType: "full",
+            runtime: "mediapipe",
+            solutionPath: `https://cdn.jsdelivr.net/npm/@mediapipe/hands`,
+          }
+        );
+      }
       console.log("model loaded!");
       setModelLoaded(true);
     }
