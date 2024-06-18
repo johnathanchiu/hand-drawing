@@ -19,6 +19,7 @@
     "react-dom": "^18.3.1",
     "react-scripts": "5.0.1",
     "react-webcam": "^7.2.0",
+    "tldraw": "^2.2.1",
     "web-vitals": "^2.1.4",
     "yalc": "^1.0.0-pre.53"
   },

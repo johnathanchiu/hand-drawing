@@ -7,7 +7,14 @@ import FloatingMenu, { ObjectShape } from "./menu";
 import { drawDiagonal, drawLine } from "../lib/hooks/simulation";
 import { createKeyMap } from "../lib/pose";
 import { euclideanDistance } from "../lib/utils";
-import { drawHands, drawPath, drawRectangle, drawCircle } from "../lib/draw";
+import {
+  drawHands,
+  drawPath,
+  drawRectangle,
+  drawCircle,
+  getPagePointFromCanvasPoint,
+  getClientPointFromCanvasPoint,
+} from "../lib/draw";
 
 export async function setupCanvas(video, canvasID) {
   const canvas = document.getElementById(canvasID);
@@ -24,6 +31,7 @@ export default function CanvasComponent({
   isModelLoaded,
   development,
 }) {
+  const editor = window.editor;
   const videoRef = useRef(null);
   const [drawingCanvasCtx, setDrawingCanvasCtx] = useState(null);
   const [floatingCanvasCtx, setFloatingCanvasCtx] = useState(null);
@@ -48,6 +56,7 @@ export default function CanvasComponent({
       const hand = hands[i];
       let indexKeypoint = hand.keypoints.index_finger_tip;
       let thumbKeypoint = hand.keypoints.thumb_tip;
+      // console.log(indexKeypoint, thumbKeypoint);
       if (
         euclideanDistance([
           [indexKeypoint.x, thumbKeypoint.x],
@@ -61,7 +70,7 @@ export default function CanvasComponent({
             euclideanDistance([
               [indexKeypoint.x, previousPoint.x],
               [indexKeypoint.y, previousPoint.y],
-            ]) < 10.0
+            ]) < 0.1
           ) {
             return;
           }
@@ -73,6 +82,26 @@ export default function CanvasComponent({
         ];
         setDrawing(true);
 
+        if (!editor.inputs.buttons.has(0)) {
+          const point = getClientPointFromCanvasPoint({
+            point: indexKeypoint,
+            editor,
+          });
+
+          editor.dispatch({
+            type: "pointer",
+            target: "canvas",
+            name: "pointer_down",
+            point,
+            pointerId: 0,
+            ctrlKey: editor.inputs.ctrlKey,
+            altKey: editor.inputs.altKey,
+            shiftKey: editor.inputs.shiftKey,
+            button: 0,
+            isPen: false,
+          });
+        }
+
         let drawingPointsLength = drawingPointsRef.current.length;
         if (drawingPointsLength > 2) {
           indicatorCanvasCtx.clearRect(
@@ -83,7 +112,7 @@ export default function CanvasComponent({
           );
         }
 
-        console.log("drawing indic", objectModeRef.current);
+        // console.log("drawing indic", objectModeRef.current);
 
         switch (objectModeRef.current) {
           case ObjectShape.CIRCLE:
@@ -160,7 +189,7 @@ export default function CanvasComponent({
         videoRef.current.height
       );
 
-      console.log("drawing full", objectModeRef.current);
+      // console.log("drawing full", objectModeRef.current);
 
       switch (objectModeRef.current) {
         case ObjectShape.CIRCLE:
@@ -170,7 +199,27 @@ export default function CanvasComponent({
           drawRectangle(drawingPointsRef.current, drawingCanvasCtx);
           break;
         case ObjectShape.LINE:
-          drawPath(drawingPointsRef.current, drawingCanvasCtx);
+          // drawPath(drawingPointsRef.current, drawingCanvasCtx);
+          const lastPoint =
+            drawingPointsRef.current[drawingPointsRef.current.length - 1];
+          if (!lastPoint) break;
+          const point = getClientPointFromCanvasPoint({
+            point:
+              drawingPointsRef.current[drawingPointsRef.current.length - 1],
+            editor,
+          });
+          editor.dispatch({
+            type: "pointer",
+            target: "canvas",
+            name: "pointer_up",
+            point,
+            pointerId: 0,
+            ctrlKey: editor.inputs.ctrlKey,
+            altKey: editor.inputs.altKey,
+            shiftKey: editor.inputs.shiftKey,
+            button: 0,
+            isPen: false,
+          });
           break;
         default:
           drawPath(drawingPointsRef.current, drawingCanvasCtx);
@@ -182,6 +231,7 @@ export default function CanvasComponent({
 
   useAnimationFrame(async (delta) => {
     let hands;
+    if (!detector) return;
     if (!development) {
       hands = await detector.estimateHands(videoRef.current, {
         flipHorizontal: false,
@@ -211,7 +261,12 @@ export default function CanvasComponent({
   }, isStreaming && isModelLoaded && !!videoRef.current);
 
   return (
-    <div className="flex h-screen">
+    <div
+      className="flex h-screen"
+      style={{
+        zIndex: 1000,
+        pointerEvents: "none",
+      }}>
       <FloatingMenu
         drawingCanvasCtx={drawingCanvasCtx}
         isStreaming={isStreaming}
@@ -223,7 +278,8 @@ export default function CanvasComponent({
       <canvas
         style={{
           position: "absolute",
-          display: isStreaming ? "block" : "none",
+          // display: isStreaming ? "block" : "none",
+          display: "none",
           backgroundColor: "transparent",
           transform: "scaleX(-1)",
           zIndex: 2,
@@ -238,7 +294,8 @@ export default function CanvasComponent({
         style={{
           position: "absolute",
           backgroundColor: "transparent",
-          display: isStreaming ? "block" : "none",
+          // display: isStreaming ? "block" : "none",
+          display: "none",
           transform: "scaleX(-1)",
           zIndex: 1,
           borderRadius: "1rem",
@@ -251,7 +308,7 @@ export default function CanvasComponent({
       <canvas
         style={{
           position: "absolute",
-          backgroundColor: "white",
+          backgroundColor: "transparent",
           display: isStreaming ? "block" : "none",
           transform: "scaleX(-1)",
           zIndex: 0,
@@ -267,10 +324,13 @@ export default function CanvasComponent({
           display: isStreaming ? "block" : "none",
           transform: "scaleX(-1)",
           position: "absolute",
+          pointerEvents: "none",
+          // objectFit: "cover",
           top: 0,
           left: 0,
-          width: 0,
-          height: 0,
+          width: "100%",
+          height: "100%",
+          opacity: 0.3,
         }}
         id="video"
         playsInline

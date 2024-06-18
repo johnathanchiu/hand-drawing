@@ -1,5 +1,6 @@
 import { chaikinSmoothing } from "./path";
 import { euclideanDistance } from "./utils";
+import { Vec } from "tldraw";
 
 export function drawHands(hands, ctx) {
   if (hands.length <= 0) {
@@ -65,22 +66,61 @@ export function drawIndicationPath(points, ctx, brushSize) {
 }
 
 export function drawPath(points, ctx, doSmooth = true, closePath = false) {
-  if (doSmooth) {
-    points = chaikinSmoothing(points, 3);
-  }
+  const editor = window["editor"];
 
-  ctx.beginPath();
-  ctx.moveTo(points[0]?.x, points[0]?.y);
+  const lastPoint = points[points.length - 1];
 
-  for (let i = 1; i < points.length; i++) {
-    const point = points[i];
-    ctx.lineTo(point?.x, point?.y);
-    console.log("Drawing");
-  }
+  // console.log(editor.inputs.currentScreenPoint, lastPoint);
 
-  if (closePath) {
-    ctx.closePath();
-  }
+  const point = getClientPointFromCanvasPoint({ point: lastPoint, editor });
 
-  ctx.stroke();
+  // console.log(points);
+
+  editor.dispatch({
+    type: "pointer",
+    target: "canvas",
+    name: "pointer_move",
+    // weird but true: we need to put the screen point back into client space
+    point,
+    pointerId: 0,
+    ctrlKey: editor.inputs.ctrlKey,
+    altKey: editor.inputs.altKey,
+    shiftKey: editor.inputs.shiftKey,
+    button: 0,
+    isPen: false,
+  });
+
+  // if (doSmooth) {
+  //   points = chaikinSmoothing(points, 3);
+  // }
+
+  // ctx.beginPath();
+  // ctx.moveTo(points[0]?.x, points[0]?.y);
+
+  // for (let i = 1; i < points.length; i++) {
+  //   const point = points[i];
+  //   ctx.lineTo(point?.x, point?.y);
+  //   // console.log("Drawing");
+  // }
+
+  // if (closePath) {
+  //   ctx.closePath();
+  // }
+
+  // ctx.stroke();
+}
+
+export function getClientPointFromCanvasPoint({ point, editor }) {
+  // const pagePoint = Vec.AddXY(
+  //   editor.inputs.currentScreenPoint,
+  //   point.x,
+  //   point.y
+  // );
+
+  const clientPoint = {
+    x: -point.x * devicePixelRatio * 0.9 + window.innerWidth,
+    y: point.y * devicePixelRatio * 0.9,
+  };
+
+  return clientPoint;
 }
