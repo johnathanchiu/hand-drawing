@@ -319,22 +319,6 @@ export default function CanvasComponent({
         }}
         id="float-canvas"
       />
-      <video
-        style={{
-          display: isStreaming ? "block" : "none",
-          transform: "scaleX(-1)",
-          position: "absolute",
-          pointerEvents: "none",
-          // objectFit: "cover",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          opacity: 0.3,
-        }}
-        id="video"
-        playsInline
-      />
     </div>
   );
 }

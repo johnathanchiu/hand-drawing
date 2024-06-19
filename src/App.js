@@ -6,11 +6,28 @@ import * as handPoseDetection from "@tensorflow-models/hand-pose-detection";
 import React, { useState, useRef, useEffect } from "react";
 import CanvasComponent from "./components/canvas";
 import { Analytics } from "@vercel/analytics/react";
-import { DefaultSizeStyle, Tldraw } from "tldraw";
+import { DefaultSizeStyle, Tldraw, getSvgPathFromPoints } from "tldraw";
 
 let detector;
 
 const DEV_MODE = false;
+
+export function LaserScribble({ scribble, zoom, color, opacity, className }) {
+  if (!scribble.points.length) return null;
+
+  return (
+    <svg className={"tl-overlays__item"}>
+      <path
+        className="tl-scribble"
+        d={getSvgPathFromPoints(scribble.points, false)}
+        stroke="rgba(255, 0, 0, 0.5)"
+        fill="none"
+        strokeWidth={8 / zoom}
+        opacity={opacity ?? scribble.opacity}
+      />
+    </svg>
+  );
+}
 
 function App() {
   // const [fingerTracker, setFingerTracker] = useState(null);
@@ -72,6 +89,28 @@ function App() {
           // pointerEvents: "all",
         }}>
         <Tldraw
+          components={{
+            Scribble: LaserScribble,
+            Background: () => (
+              <video
+                style={{
+                  display: "block", //isStreaming ? "block" : "none",
+                  transform: "scaleX(-1)",
+                  position: "fixed",
+                  pointerEvents: "none",
+                  // objectFit: "cover",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100vh",
+                  opacity: 0.3,
+                  zIndex: 1000000000000000,
+                }}
+                id="video"
+                playsInline
+              />
+            ),
+          }}
           onMount={(editor) => {
             // hide the debug panel (for cleaner gifs)
             editor.updateInstanceState({
