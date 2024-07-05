@@ -1,4 +1,3 @@
-import { chaikinSmoothing } from "./path";
 import { euclideanDistance } from "./utils";
 
 export function drawHands(hands, ctx) {
@@ -64,23 +63,29 @@ export function drawIndicationPath(points, ctx, brushSize) {
   ctx.fill();
 }
 
-export function drawPath(points, ctx, doSmooth = true, closePath = false) {
-  if (doSmooth) {
-    points = chaikinSmoothing(points, 3);
-  }
+export function drawPath(points) {
+  const lastPoint = points[points.length - 1];
+  const point = getClientPointFromCanvasPoint({ point: lastPoint });
 
-  ctx.beginPath();
-  ctx.moveTo(points[0]?.x, points[0]?.y);
+  const editor = window["editor"];
+  editor.dispatch({
+    type: "pointer",
+    target: "canvas",
+    name: "pointer_move",
+    // weird but true: we need to put the screen point back into client space
+    point,
+    pointerId: 0,
+    ctrlKey: editor.inputs.ctrlKey,
+    altKey: editor.inputs.altKey,
+    shiftKey: editor.inputs.shiftKey,
+    button: 0,
+    isPen: false,
+  });
+}
 
-  for (let i = 1; i < points.length; i++) {
-    const point = points[i];
-    ctx.lineTo(point?.x, point?.y);
-    console.log("Drawing");
-  }
-
-  if (closePath) {
-    ctx.closePath();
-  }
-
-  ctx.stroke();
+export function getClientPointFromCanvasPoint({ point }) {
+  return {
+    x: -point.x * window.innerWidth + window.innerWidth,
+    y: point.y * window.innerHeight,
+  };
 }

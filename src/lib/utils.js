@@ -5,3 +5,9 @@ export const euclideanDistance = (dimensionPointPairs) =>
       0
     )
   );
+
+export function normalize(keypoint, width, height) {
+  keypoint.x = keypoint.x / width;
+  keypoint.y = keypoint.y / height;
+  return keypoint;
+}

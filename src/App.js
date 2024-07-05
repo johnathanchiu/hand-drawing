@@ -39,21 +39,6 @@ function App() {
   return (
     <div className="flex flex-col h-screen">
       <Analytics />
-      {/* Top Header Bar */}
-      <div className="bg-gray-800 text-white p-4 flex items-center">
-        {/* App name on the left */}
-        <div className="flex-1 text-left">
-          <p className="text-lg font-bold">Whiteboarding</p>
-        </div>
-        {/* Spacer div to center the text */}
-        <div className="flex-1 text-center">
-          <p className="text-lg">👌 Pinch to draw</p>
-        </div>
-        <div className="flex-1 text-right">
-          <p className="text-lg">by Johnathan Chiu</p>
-        </div>
-      </div>
-      {/* Canvas & Menu */}
       <CanvasComponent
         detector={detector}
         isModelLoaded={isModelLoaded}

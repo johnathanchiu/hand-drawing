@@ -1,27 +1,15 @@
 import React, { useState, useRef, useEffect } from "react";
 
-export const ObjectShape = Object.freeze({
-  LINE: "line",
-  RECTANGLE: "rectangle",
-  CIRCLE: "circle",
-});
-
 const FloatingMenu = ({
-  drawingCanvasCtx,
   isStreaming,
   setStreaming,
   videoRef,
   isModelLoaded,
-  objectModeRef,
 }) => {
-  const [position, setPosition] = useState({ x: 20, y: 80 });
+  const [position, setPosition] = useState({ x: 20, y: 100 });
   const [dragging, setDragging] = useState(false);
   const positionRef = useRef(position);
-  const rel = useRef(null);
-
-  const [drawingObjectMode, setDrawingObjectMode] = useState(
-    objectModeRef.current
-  );
+  const relativePosition = useRef(null);
 
   useEffect(() => {
     positionRef.current = position;
@@ -30,7 +18,7 @@ const FloatingMenu = ({
   const onMouseDown = (e) => {
     setDragging(true);
     // Calculate the relative position of the mouse click inside the element
-    rel.current = {
+    relativePosition.current = {
       x: e.pageX - positionRef.current.x,
       y: e.pageY - positionRef.current.y,
     };
@@ -54,8 +42,8 @@ const FloatingMenu = ({
     // Use requestAnimationFrame for smoother updates
     requestAnimationFrame(() => {
       setPosition({
-        x: e.pageX - rel.current.x,
-        y: e.pageY - rel.current.y,
+        x: e.pageX - relativePosition.current.x,
+        y: e.pageY - relativePosition.current.y,
       });
     });
 
@@ -65,85 +53,28 @@ const FloatingMenu = ({
 
   return (
     <div
-      className="rounded-lg absolute bg-gray-200 bg-opacity-80 p-4 cursor-move flex flex-col"
+      className="rounded-lg absolute bg-gray-200 bg-opacity-80 p-2 cursor-move flex flex-col"
       style={{
         top: `${position.y}px`,
         left: `${position.x}px`,
-        zIndex: 3,
+        zIndex: 100000000000,
       }}
       onMouseDown={onMouseDown}
       onMouseUp={onMouseUp}
       onMouseMove={onMouseMove}
     >
-      <div className="text-center font-bold text-xl">Menu</div>
+      <div className="text-center">Settings</div>
       {isModelLoaded && videoRef && (
         <button
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4"
+          className="bg-blue-500 hover:bg-blue-700 text-white py-1 px-2 rounded mt-2"
           onClick={() => {
             setStreaming((prevState) => !prevState);
           }}
         >
-          {isStreaming ? "Stop Drawing" : "Start Drawing"}
+          {isStreaming ? "Close Webcam" : "Toggle Webcam"}
         </button>
       )}
-      {isStreaming && (
-        <button
-          className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mt-4"
-          onClick={() => {
-            drawingCanvasCtx.clearRect(
-              0,
-              0,
-              videoRef.current.width,
-              videoRef.current.height
-            );
-          }}
-        >
-          Clear Canvas!
-        </button>
-      )}
-      {isStreaming && (
-        <div className="flex justify-between mt-4 space-x-2">
-          <button
-            className={`bg-white hover:bg-gray-200 p-2 rounded ${
-              drawingObjectMode === ObjectShape.LINE
-                ? "ring-2 ring-blue-500"
-                : ""
-            }`}
-            onClick={() => {
-              setDrawingObjectMode(ObjectShape.LINE);
-              objectModeRef.current = ObjectShape.LINE;
-            }}
-          >
-            <i className="fa-solid fa-pen"></i>
-          </button>
-          <button
-            className={`bg-white hover:bg-gray-200 p-2 rounded ${
-              drawingObjectMode === ObjectShape.CIRCLE
-                ? "ring-2 ring-blue-500"
-                : ""
-            }`}
-            onClick={() => {
-              setDrawingObjectMode(ObjectShape.CIRCLE);
-              objectModeRef.current = ObjectShape.CIRCLE;
-            }}
-          >
-            <i className="fa-regular fa-circle"></i>
-          </button>
-          <button
-            className={`bg-white hover:bg-gray-200 p-2 rounded ${
-              drawingObjectMode === ObjectShape.RECTANGLE
-                ? "ring-2 ring-blue-500"
-                : ""
-            }`}
-            onClick={() => {
-              setDrawingObjectMode(ObjectShape.RECTANGLE);
-              objectModeRef.current = ObjectShape.RECTANGLE;
-            }}
-          >
-            <i className="fa-regular fa-square"></i>
-          </button>
-        </div>
-      )}
+      <div className="text-right text-xs pt-2">by johnathan chiu</div>
     </div>
   );
 };
