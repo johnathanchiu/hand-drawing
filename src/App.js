@@ -6,28 +6,10 @@ import * as handPoseDetection from "@tensorflow-models/hand-pose-detection";
 import React, { useState, useRef, useEffect } from "react";
 import CanvasComponent from "./components/canvas";
 import { Analytics } from "@vercel/analytics/react";
-import { DefaultSizeStyle, Tldraw, getSvgPathFromPoints } from "tldraw";
 
 let detector;
 
 const DEV_MODE = false;
-
-export function LaserScribble({ scribble, zoom, color, opacity, className }) {
-  if (!scribble.points.length) return null;
-
-  return (
-    <svg className={"tl-overlays__item"}>
-      <path
-        className="tl-scribble"
-        d={getSvgPathFromPoints(scribble.points, false)}
-        stroke="rgba(255, 0, 0, 0.5)"
-        fill="none"
-        strokeWidth={8 / zoom}
-        opacity={opacity ?? scribble.opacity}
-      />
-    </svg>
-  );
-}
 
 function App() {
   // const [fingerTracker, setFingerTracker] = useState(null);
@@ -58,70 +40,23 @@ function App() {
     <div className="flex flex-col h-screen">
       <Analytics />
       {/* Top Header Bar */}
-      {/* <div className="bg-gray-800 text-white p-4 flex items-center"> */}
-      {/* App name on the left */}
-      {/* <div className="flex-1 text-left"> */}
-      {/* <p className="text-lg font-bold">Whiteboarding</p> */}
-      {/* </div> */}
-      {/* Spacer div to center the text */}
-      {/* <div className="flex-1 text-center"> */}
-      {/* <p className="text-lg">👌 Pinch to draw</p> */}
-      {/* </div> */}
-      {/* <div className="flex-1 text-right"> */}
-      {/* <p className="text-lg">by Johnathan Chiu</p> */}
-      {/* </div> */}
-      {/* </div> */}
+      {/* <div className="bg-gray-800 text-white p-4 flex items-center">
+        <div className="flex-1 text-left">
+          <p className="text-lg font-bold">Whiteboarding</p>
+        </div>
+        <div className="flex-1 text-center">
+          <p className="text-lg">👌 Pinch to draw</p>
+        </div>
+        <div className="flex-1 text-right">
+          <p className="text-lg">by Johnathan Chiu</p>
+        </div>
+      </div> */}
       {/* Canvas & Menu */}
       <CanvasComponent
         detector={detector}
         isModelLoaded={isModelLoaded}
         development={DEV_MODE}
       />
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          // height: "calc(100% - 60px)",
-          // zIndex: -100,
-          // pointerEvents: "all",
-        }}>
-        <Tldraw
-          components={{
-            Scribble: LaserScribble,
-            Background: () => (
-              <video
-                style={{
-                  display: "block", //isStreaming ? "block" : "none",
-                  transform: "scaleX(-1)",
-                  position: "fixed",
-                  pointerEvents: "none",
-                  // objectFit: "cover",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: "100vh",
-                  opacity: 0.3,
-                  zIndex: 1000000000000000,
-                }}
-                id="video"
-                playsInline
-              />
-            ),
-          }}
-          onMount={(editor) => {
-            // hide the debug panel (for cleaner gifs)
-            editor.updateInstanceState({
-              isDebugMode: false,
-            });
-            window["editor"] = editor;
-            editor.setCurrentTool("draw");
-            editor.setStyleForNextShapes(DefaultSizeStyle, "xl");
-          }}
-        />
-      </div>
     </div>
   );
 }

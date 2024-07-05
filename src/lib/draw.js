@@ -1,6 +1,4 @@
-import { chaikinSmoothing } from "./path";
 import { euclideanDistance } from "./utils";
-import { Vec } from "tldraw";
 
 export function drawHands(hands, ctx) {
   if (hands.length <= 0) {
@@ -65,17 +63,11 @@ export function drawIndicationPath(points, ctx, brushSize) {
   ctx.fill();
 }
 
-export function drawPath(points, ctx, doSmooth = true, closePath = false) {
-  const editor = window["editor"];
-
+export function drawPath(points) {
   const lastPoint = points[points.length - 1];
+  const point = getClientPointFromCanvasPoint({ point: lastPoint });
 
-  // console.log(editor.inputs.currentScreenPoint, lastPoint);
-
-  const point = getClientPointFromCanvasPoint({ point: lastPoint, editor });
-
-  // console.log(points);
-
+  const editor = window["editor"];
   editor.dispatch({
     type: "pointer",
     target: "canvas",
@@ -89,38 +81,11 @@ export function drawPath(points, ctx, doSmooth = true, closePath = false) {
     button: 0,
     isPen: false,
   });
-
-  // if (doSmooth) {
-  //   points = chaikinSmoothing(points, 3);
-  // }
-
-  // ctx.beginPath();
-  // ctx.moveTo(points[0]?.x, points[0]?.y);
-
-  // for (let i = 1; i < points.length; i++) {
-  //   const point = points[i];
-  //   ctx.lineTo(point?.x, point?.y);
-  //   // console.log("Drawing");
-  // }
-
-  // if (closePath) {
-  //   ctx.closePath();
-  // }
-
-  // ctx.stroke();
 }
 
-export function getClientPointFromCanvasPoint({ point, editor }) {
-  // const pagePoint = Vec.AddXY(
-  //   editor.inputs.currentScreenPoint,
-  //   point.x,
-  //   point.y
-  // );
-
-  const clientPoint = {
-    x: -point.x * devicePixelRatio * 0.9 + window.innerWidth,
-    y: point.y * devicePixelRatio * 0.9,
+export function getClientPointFromCanvasPoint({ point }) {
+  return {
+    x: -point.x * window.innerWidth + window.innerWidth,
+    y: point.y * window.innerHeight,
   };
-
-  return clientPoint;
 }
