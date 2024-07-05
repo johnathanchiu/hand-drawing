@@ -224,13 +224,6 @@ export default function CanvasComponent({
   }, isStreaming && isModelLoaded && !!videoRef.current);
 
   return (
-    // <div
-    //   className="flex h-screen"
-    //   style={{
-    //     zIndex: 1000,
-    //     pointerEvents: "none",
-    //   }}>
-    // </div>
     <div
       style={{
         position: "absolute",

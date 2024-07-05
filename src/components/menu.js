@@ -53,7 +53,7 @@ const FloatingMenu = ({
 
   return (
     <div
-      className="rounded-lg absolute bg-gray-200 bg-opacity-80 p-4 cursor-move flex flex-col"
+      className="rounded-lg absolute bg-gray-200 bg-opacity-80 p-2 cursor-move flex flex-col"
       style={{
         top: `${position.y}px`,
         left: `${position.x}px`,
@@ -66,7 +66,7 @@ const FloatingMenu = ({
       <div className="text-center">Settings</div>
       {isModelLoaded && videoRef && (
         <button
-          className="bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded mt-4"
+          className="bg-blue-500 hover:bg-blue-700 text-white py-1 px-2 rounded mt-2"
           onClick={() => {
             setStreaming((prevState) => !prevState);
           }}
@@ -74,6 +74,7 @@ const FloatingMenu = ({
           {isStreaming ? "Close Webcam" : "Toggle Webcam"}
         </button>
       )}
+      <div className="text-right text-xs pt-2">by johnathan chiu</div>
     </div>
   );
 };
