@@ -11,3 +11,9 @@ export function normalize(keypoint, width, height) {
   keypoint.y = keypoint.y / height;
   return keypoint;
 }
+
+export function inverseNormalize(keypoint, width, height) {
+  keypoint.x = keypoint.x * width;
+  keypoint.y = keypoint.y * height;
+  return keypoint;
+}

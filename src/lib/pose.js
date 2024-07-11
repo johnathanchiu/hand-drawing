@@ -1,12 +1,36 @@
 import { euclideanDistance } from "./utils";
 
-const FINGER_LOOKUP_INDICES = {
-  thumb: [0, 1, 2, 3, 4],
-  indexFinger: [0, 5, 6, 7, 8],
-  middleFinger: [0, 9, 10, 11, 12],
-  ringFinger: [0, 13, 14, 15, 16],
-  pinky: [0, 17, 18, 19, 20],
-};
+// const FINGER_LOOKUP_INDICES = {
+//   thumb: [0, 1, 2, 3, 4],
+//   indexFinger: [0, 5, 6, 7, 8],
+//   middleFinger: [0, 9, 10, 11, 12],
+//   ringFinger: [0, 13, 14, 15, 16],
+//   pinky: [0, 17, 18, 19, 20],
+// };
+
+const FINGER_LOOKUP_INDICES = [
+  "WRIST",
+  "THUMB_CMC",
+  "THUMB_MCP",
+  "THUMB_IP",
+  "THUMB_TIP",
+  "INDEX_FINGER_MCP",
+  "INDEX_FINGER_PIP",
+  "INDEX_FINGER_DIP",
+  "INDEX_FINGER_TIP",
+  "MIDDLE_FINGER_MCP",
+  "MIDDLE_FINGER_PIP",
+  "MIDDLE_FINGER_DIP",
+  "MIDDLE_FINGER_TIP",
+  "RING_FINGER_MCP",
+  "RING_FINGER_PIP",
+  "RING_FINGER_DIP",
+  "RING_FINGER_TIP",
+  "PINKY_MCP",
+  "PINKY_PIP",
+  "PINKY_DIP",
+  "PINKY_TIP",
+];
 
 const FIST_PALM_CENTROIDS = [
   [
@@ -33,19 +57,24 @@ export function getUserHandGesture(handPoseEstimations) {
 
 export function createKeyMap(handPoseEstimations) {
   const handPoseKeyMap = [];
-  for (let i = 0; i < handPoseEstimations.length; i++) {
-    let currHandPose = handPoseEstimations[i];
-    let keypoints = currHandPose.keypoints.reduce((acc, obj) => {
-      acc[obj.name] = obj;
+  for (let i = 0; i < handPoseEstimations.landmarks.length; i++) {
+    let keypoints = handPoseEstimations.landmarks[i].reduce((acc, obj, idx) => {
+      acc[FINGER_LOOKUP_INDICES[idx]] = obj;
       return acc;
     }, {});
-    let keypoints3D = currHandPose.keypoints3D.reduce((acc, obj) => {
-      acc[obj.name] = obj;
-      return acc;
-    }, {});
+    let keypoints3D = handPoseEstimations.worldLandmarks[i].reduce(
+      (acc, obj, idx) => {
+        acc[FINGER_LOOKUP_INDICES[idx]] = obj;
+        return acc;
+      },
+      {}
+    );
 
     handPoseKeyMap.push({
-      handedness: currHandPose.handedness === "Left" ? "Right" : "Left",
+      handedness:
+        handPoseEstimations.handedness[i].categoryName === "Left"
+          ? "Right"
+          : "Left",
       keypoints: keypoints,
       keypoints3D: keypoints3D,
     });

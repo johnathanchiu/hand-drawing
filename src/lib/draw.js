@@ -1,6 +1,6 @@
-import { euclideanDistance } from "./utils";
+import { euclideanDistance, inverseNormalize } from "./utils";
 
-export function drawHands(hands, ctx) {
+export function drawHands(hands, videoWidth, videoHeight, ctx) {
   if (hands.length <= 0) {
     return;
   }
@@ -12,20 +12,15 @@ export function drawHands(hands, ctx) {
     ctx.lineWidth = 2;
 
     for (let key in hand.keypoints) {
-      const keypoint = hand.keypoints[key];
+      const keypoint = inverseNormalize(
+        hand.keypoints[key],
+        videoWidth,
+        videoHeight
+      );
       ctx.beginPath();
       ctx.arc(keypoint.x, keypoint.y, 4, 0, 2 * Math.PI);
       ctx.fill();
     }
-
-    // const fingers = Object.keys(FINGER_LOOKUP_INDICES);
-    // for (let z = 0; z < fingers.length; z++) {
-    //   const finger = fingers[z];
-    //   const points = FINGER_LOOKUP_INDICES[finger].map(
-    //     (idx) => hands[i].keypoints[idx]
-    //   );
-    //   drawPath(points, ctx);
-    // }
   }
 }
 

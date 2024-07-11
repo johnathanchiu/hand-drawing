@@ -7,7 +7,7 @@ import { createKeyMap } from "../lib/pose";
 import { drawDiagonal, drawLine } from "../lib/hooks/simulation";
 import { useAnimationFrame } from "../lib/hooks/animation";
 import { setupWebcam, teardownWebcam } from "../lib/video";
-import { euclideanDistance, normalize } from "../lib/utils";
+import { euclideanDistance } from "../lib/utils";
 import {
   drawHands,
   drawPath,
@@ -65,18 +65,8 @@ export default function CanvasComponent({
 
     for (let i = 0; i < hands.length; i++) {
       const hand = hands[i];
-      let indexKeypoint = hand.keypoints.index_finger_tip;
-      let thumbKeypoint = hand.keypoints.thumb_tip;
-      indexKeypoint = normalize(
-        indexKeypoint,
-        videoRef.current.width,
-        videoRef.current.height
-      );
-      thumbKeypoint = normalize(
-        thumbKeypoint,
-        videoRef.current.width,
-        videoRef.current.height
-      );
+      let indexKeypoint = hand.keypoints.INDEX_FINGER_TIP;
+      let thumbKeypoint = hand.keypoints.THUMB_TIP;
       if (
         euclideanDistance([
           [indexKeypoint.x, thumbKeypoint.x],
@@ -208,9 +198,7 @@ export default function CanvasComponent({
     //   );
     // }
 
-    hands = await detector.estimateHands(videoRef.current, {
-      flipHorizontal: false,
-    });
+    hands = await detector.detect(videoRef.current);
     hands = createKeyMap(hands);
 
     floatingCanvasCtx.clearRect(
@@ -219,8 +207,13 @@ export default function CanvasComponent({
       videoRef.current.videoWidth,
       videoRef.current.videoHeight
     );
-    drawHands(hands, floatingCanvasCtx);
     draw(hands);
+    drawHands(
+      hands,
+      videoRef.current.width,
+      videoRef.current.height,
+      floatingCanvasCtx
+    );
   }, isStreaming && isModelLoaded && !!videoRef.current);
 
   return (
