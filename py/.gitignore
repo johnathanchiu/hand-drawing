@@ -1,0 +1,4 @@
+dataset/
+*.zip
+*.pkl
+__pycache__

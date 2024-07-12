@@ -1,6 +1,6 @@
-import { euclideanDistance } from "./utils";
+import { inverseNormalize } from "./utils";
 
-export function drawHands(hands, ctx) {
+export function drawHands(hands, videoWidth, videoHeight, ctx) {
   if (hands.length <= 0) {
     return;
   }
@@ -12,55 +12,16 @@ export function drawHands(hands, ctx) {
     ctx.lineWidth = 2;
 
     for (let key in hand.keypoints) {
-      const keypoint = hand.keypoints[key];
+      const keypoint = inverseNormalize(
+        hand.keypoints[key],
+        videoWidth,
+        videoHeight
+      );
       ctx.beginPath();
       ctx.arc(keypoint.x, keypoint.y, 4, 0, 2 * Math.PI);
       ctx.fill();
     }
-
-    // const fingers = Object.keys(FINGER_LOOKUP_INDICES);
-    // for (let z = 0; z < fingers.length; z++) {
-    //   const finger = fingers[z];
-    //   const points = FINGER_LOOKUP_INDICES[finger].map(
-    //     (idx) => hands[i].keypoints[idx]
-    //   );
-    //   drawPath(points, ctx);
-    // }
   }
-}
-
-export function drawCircle(points, ctx) {
-  let length = points.length;
-  let radius = euclideanDistance([
-    [points[length - 1].x, points[0].x],
-    [points[length - 1].y, points[0].y],
-  ]);
-  ctx.beginPath();
-  ctx.arc(points[0].x, points[0].y, radius, 0, 2 * Math.PI);
-  ctx.stroke();
-}
-
-export function drawRectangle(points, ctx) {
-  let length = points.length;
-  let rectWidth = points[length - 1].x - points[0].x;
-  let rectHeight = points[length - 1].y - points[0].y;
-
-  ctx.beginPath();
-  ctx.rect(points[0].x, points[0].y, rectWidth, rectHeight);
-  ctx.stroke();
-}
-
-export function drawIndicationPath(points, ctx, brushSize) {
-  let length = points.length;
-
-  ctx.arc(
-    points[length - 1].x,
-    points[length - 1].y,
-    brushSize,
-    0,
-    2 * Math.PI
-  );
-  ctx.fill();
 }
 
 export function drawPath(points) {

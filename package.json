@@ -5,6 +5,7 @@
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.5.2",
     "@mediapipe/hands": "^0.4.0",
+    "@mediapipe/tasks-vision": "^0.10.14",
     "@tensorflow-models/hand-pose-detection": "^2.0.1",
     "@tensorflow/tfjs-backend-cpu": "^4.13.0",
     "@tensorflow/tfjs-backend-webgl": "^4.13.0",

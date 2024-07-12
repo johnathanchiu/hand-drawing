@@ -3,11 +3,10 @@ import { DefaultSizeStyle, Tldraw, getSvgPathFromPoints } from "tldraw";
 
 import FloatingMenu from "./menu";
 
-import { createKeyMap } from "../lib/pose";
-import { drawDiagonal, drawLine } from "../lib/hooks/simulation";
+import { createKeyMap, getUserHandGesture } from "../lib/pose";
 import { useAnimationFrame } from "../lib/hooks/animation";
 import { setupWebcam, teardownWebcam } from "../lib/video";
-import { euclideanDistance, normalize } from "../lib/utils";
+import { euclideanDistance } from "../lib/utils";
 import {
   drawHands,
   drawPath,
@@ -41,11 +40,7 @@ async function setupCanvas(video, canvasID) {
   return [canvas, ctx];
 }
 
-export default function CanvasComponent({
-  detector,
-  isModelLoaded,
-  development,
-}) {
+export default function CanvasComponent({ detector, isModelLoaded }) {
   const editor = window.editor;
   const videoRef = useRef(null);
   const [floatingCanvasCtx, setFloatingCanvasCtx] = useState(null);
@@ -54,8 +49,33 @@ export default function CanvasComponent({
   const [isDrawing, setDrawing] = useState(false);
 
   const drawingPointsRef = useRef([]);
+  const lastVideoTimeRef = useRef(-1);
 
-  const simulationHandsIdxRef = useRef(0);
+  const changeCanvasTool = (gesture) => {
+    switch (gesture) {
+      case "middle_pinch":
+        editor.setCurrentTool("eraser");
+        return;
+      case "ring_pinch":
+        editor.setCurrentTool("select");
+        return;
+      case "pinky_pinch":
+        editor.setCurrentTool("draw");
+        return;
+      default:
+        return;
+    }
+  };
+
+  const nextDrawingPointIsFarEnough = (trackingPoint, previousPoint) => {
+    // Determines if the current point is far enough from the previous point
+    return (
+      euclideanDistance([
+        [trackingPoint.x, previousPoint.x],
+        [trackingPoint.y, previousPoint.y],
+      ]) >= 0.005
+    );
+  };
 
   const draw = (hands) => {
     if (hands.length < 1) {
@@ -64,47 +84,31 @@ export default function CanvasComponent({
     }
 
     for (let i = 0; i < hands.length; i++) {
-      const hand = hands[i];
-      let indexKeypoint = hand.keypoints.index_finger_tip;
-      let thumbKeypoint = hand.keypoints.thumb_tip;
-      indexKeypoint = normalize(
-        indexKeypoint,
-        videoRef.current.width,
-        videoRef.current.height
-      );
-      thumbKeypoint = normalize(
-        thumbKeypoint,
-        videoRef.current.width,
-        videoRef.current.height
-      );
-      if (
-        euclideanDistance([
-          [indexKeypoint.x, thumbKeypoint.x],
-          [indexKeypoint.y, thumbKeypoint.y],
-        ]) < 0.06
-      ) {
+      const [gesture, trackingPoint] = getUserHandGesture(hands[i]);
+      changeCanvasTool(gesture);
+
+      // TODO: Make such that if it is in the midst of drawing increase the threshold
+      // (due to quick rapid movements that result in the distance being a bit larger and misread)
+      // const pinchThreshold = 0.06;
+
+      if (gesture === "index_pinch" && trackingPoint) {
         if (drawingPointsRef.current.length > 0) {
           let previousPoint =
             drawingPointsRef.current[drawingPointsRef.current.length - 1];
-          if (
-            euclideanDistance([
-              [indexKeypoint.x, previousPoint.x],
-              [indexKeypoint.y, previousPoint.y],
-            ]) < 0.005
-          ) {
+          if (!nextDrawingPointIsFarEnough(trackingPoint, previousPoint)) {
             return;
           }
         }
 
         drawingPointsRef.current = [
           ...drawingPointsRef.current,
-          { x: indexKeypoint.x, y: indexKeypoint.y },
+          { x: trackingPoint.x, y: trackingPoint.y },
         ];
         setDrawing(true);
 
         if (!editor.inputs.buttons.has(0)) {
           const point = getClientPointFromCanvasPoint({
-            point: indexKeypoint,
+            point: trackingPoint,
             editor,
           });
 
@@ -190,37 +194,28 @@ export default function CanvasComponent({
   useAnimationFrame(async (delta) => {
     let hands;
     if (!detector) return;
-    // if (!development) {
-    // hands = await detector.estimateHands(videoRef.current, {
-    //   flipHorizontal: false,
-    // });
-    // hands = createKeyMap(hands);
-    // } else {
-    //   let simHands = drawDiagonal();
-    //   if (simulationHandsIdxRef.current < simHands.length) {
-    //     hands = [simHands[simulationHandsIdxRef.current]];
-    //   } else {
-    //     hands = [];
-    //   }
-    //   simulationHandsIdxRef.current = Math.min(
-    //     simulationHandsIdxRef.current + 1,
-    //     simHands.length
-    //   );
-    // }
 
-    hands = await detector.estimateHands(videoRef.current, {
-      flipHorizontal: false,
-    });
-    hands = createKeyMap(hands);
+    let nowInMs = Date.now();
+    if (videoRef.current.currentTime !== lastVideoTimeRef.current) {
+      lastVideoTimeRef.current = videoRef.current.currentTime;
 
-    floatingCanvasCtx.clearRect(
-      0,
-      0,
-      videoRef.current.videoWidth,
-      videoRef.current.videoHeight
-    );
-    drawHands(hands, floatingCanvasCtx);
-    draw(hands);
+      hands = detector.recognizeForVideo(videoRef.current, nowInMs);
+      hands = createKeyMap(hands);
+
+      floatingCanvasCtx.clearRect(
+        0,
+        0,
+        videoRef.current.videoWidth,
+        videoRef.current.videoHeight
+      );
+      draw(hands);
+      drawHands(
+        hands,
+        videoRef.current.width,
+        videoRef.current.height,
+        floatingCanvasCtx
+      );
+    }
   }, isStreaming && isModelLoaded && !!videoRef.current);
 
   return (
