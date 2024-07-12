@@ -1,4 +1,4 @@
-import { euclideanDistance, inverseNormalize } from "./utils";
+import { inverseNormalize } from "./utils";
 
 export function drawHands(hands, videoWidth, videoHeight, ctx) {
   if (hands.length <= 0) {
@@ -22,40 +22,6 @@ export function drawHands(hands, videoWidth, videoHeight, ctx) {
       ctx.fill();
     }
   }
-}
-
-export function drawCircle(points, ctx) {
-  let length = points.length;
-  let radius = euclideanDistance([
-    [points[length - 1].x, points[0].x],
-    [points[length - 1].y, points[0].y],
-  ]);
-  ctx.beginPath();
-  ctx.arc(points[0].x, points[0].y, radius, 0, 2 * Math.PI);
-  ctx.stroke();
-}
-
-export function drawRectangle(points, ctx) {
-  let length = points.length;
-  let rectWidth = points[length - 1].x - points[0].x;
-  let rectHeight = points[length - 1].y - points[0].y;
-
-  ctx.beginPath();
-  ctx.rect(points[0].x, points[0].y, rectWidth, rectHeight);
-  ctx.stroke();
-}
-
-export function drawIndicationPath(points, ctx, brushSize) {
-  let length = points.length;
-
-  ctx.arc(
-    points[length - 1].x,
-    points[length - 1].y,
-    brushSize,
-    0,
-    2 * Math.PI
-  );
-  ctx.fill();
 }
 
 export function drawPath(points) {
