@@ -37,6 +37,20 @@ export function getUserHandGesture(handGestureInformation) {
     const gesture_name = gestures[0].categoryName;
     if (gesture_name) {
       // const trackingPointName = GESTURE_POINT_LOOKUP[gesture_name];
+
+      // Add hack to reduce false positives
+      const indexKeypoint = handGestureInformation.keypoints.INDEX_FINGER_TIP;
+      const thumbKeypoint = handGestureInformation.keypoints.THUMB_TIP;
+      if (
+        gesture_name === "index_pinch" &&
+        euclideanDistance([
+          [indexKeypoint.x, thumbKeypoint.x],
+          [indexKeypoint.y, thumbKeypoint.y],
+        ]) >= 0.06
+      ) {
+        return [null, null];
+      }
+
       return [gesture_name, handGestureInformation.keypoints.INDEX_FINGER_TIP];
     }
   }
