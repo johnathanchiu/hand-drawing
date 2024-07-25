@@ -38,7 +38,12 @@ export function getUserHandGesture(handGestureInformation) {
     const indexKeypoint = handGestureInformation.keypoints.INDEX_FINGER_TIP;
     const thumbKeypoint = handGestureInformation.keypoints.THUMB_TIP;
     if (gesture_name) {
-      return [gesture_name, handGestureInformation.keypoints.INDEX_FINGER_TIP];
+      if (gesture_name != "none") {
+        return [
+          gesture_name,
+          handGestureInformation.keypoints.INDEX_FINGER_TIP,
+        ];
+      }
     }
 
     if (
