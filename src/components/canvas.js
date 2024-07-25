@@ -199,7 +199,7 @@ export default function CanvasComponent({ detector, isModelLoaded }) {
     if (videoRef.current.currentTime !== lastVideoTimeRef.current) {
       lastVideoTimeRef.current = videoRef.current.currentTime;
 
-      hands = detector.recognizeForVideo(videoRef.current, nowInMs);
+      hands = await detector.recognizeForVideo(videoRef.current, nowInMs);
       hands = createKeyMap(hands);
 
       floatingCanvasCtx.clearRect(
