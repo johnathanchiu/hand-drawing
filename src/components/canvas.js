@@ -254,7 +254,7 @@ export default function CanvasComponent({ detector, isModelLoaded }) {
           transform: "scaleX(-1)",
           position: "fixed",
           pointerEvents: "none",
-          objectFit: "fill",
+          objectFit: "cover",
           top: 0,
           left: 0,
           width: "100%",
