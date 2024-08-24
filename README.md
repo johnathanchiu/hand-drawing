@@ -2,6 +2,8 @@
 
 Exploration into novel methods of interacting with your computer! This project makes use of on-device ML to track hands in your webcam.
 
+https://github.com/user-attachments/assets/1337fd4f-1a54-4eec-ba0d-36c0159cbf1d
+
 ## Project Setup
 
 You can run this project by running the following:
