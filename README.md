@@ -2,7 +2,7 @@
 
 Exploration into novel methods of interacting with your computer! This project makes use of on-device ML to track hands in your webcam. Try it out here: https://floating-hands-whiteboard.vercel.app/.
 
-https://github.com/user-attachments/assets/1337fd4f-1a54-4eec-ba0d-36c0159cbf1d
+https://github.com/user-attachments/assets/05b91c36-c556-4b11-ba4a-0af0822647e7
 
 ## Project Setup
 
