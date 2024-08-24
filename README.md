@@ -1,6 +1,6 @@
 # Hand Drawing Whiteboard
 
-Exploration into novel methods of interacting with your computer! This project makes use of on-device ML to track hands in your webcam.
+Exploration into novel methods of interacting with your computer! This project makes use of on-device ML to track hands in your webcam. Try it out here: https://floating-hands-whiteboard.vercel.app/.
 
 https://github.com/user-attachments/assets/1337fd4f-1a54-4eec-ba0d-36c0159cbf1d
 
