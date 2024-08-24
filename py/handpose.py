@@ -51,14 +51,16 @@ pairwise_points = [
 # POSE = "index_pinch"
 # POSE = "middle_pinch"
 # POSE = "ring_pinch"
-# POSE = "pinky_pinch"
-POSE = "none"
+POSE = "pinky_pinch"
+# POSE = "none"
 
 # POSE = "fist"
 # POSE = "palm"
 
 folder = f"dataset/{POSE}"
 os.makedirs(folder, exist_ok=True)
+
+num_samples_so_far = len(os.listdir(folder))
 
 
 pose_data = []
@@ -88,8 +90,11 @@ with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.5) a
 
         # Rendering results
         if results.multi_hand_landmarks:
-            cv2.imwrite(os.path.join(folder, f"{len(pose_data) + 400}.jpg"), image)
-            print(os.path.join(folder, f"{len(pose_data) + 400}.jpg"))
+            cv2.imwrite(
+                os.path.join(folder, f"{len(pose_data) + num_samples_so_far}.jpg"),
+                image,
+            )
+            print(os.path.join(folder, f"{len(pose_data) + num_samples_so_far}.jpg"))
             for num, hand in enumerate(results.multi_hand_landmarks):
                 mp_drawing.draw_landmarks(
                     image,
@@ -112,14 +117,6 @@ with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.5) a
                     }
                     for idx, landmark in enumerate(hand.landmark)
                 }
-
-                # feat_vec = [
-                #     euclidean_dist(landmarks[a], landmarks[b])
-                #     for a, b in pairwise_points
-                # ]
-                # centroid_idx = find_near_centroid(np.array(feat_vec))
-
-                # print(centroid_idx)
 
                 pose_data.append({"handedness": handedness, "landmarks": landmarks})
 
